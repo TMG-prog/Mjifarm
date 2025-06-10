@@ -172,6 +172,7 @@
           <option name="screenY" value="3088" />
         </PersistentDeviceSelectionData>
         <PersistentDeviceSelectionData>
+<<<<<<< HEAD
           <option name="api" value="34" />
           <option name="brand" value="samsung" />
           <option name="codename" value="b6q" />
@@ -184,6 +185,8 @@
           <option name="screenY" value="2640" />
         </PersistentDeviceSelectionData>
         <PersistentDeviceSelectionData>
+=======
+>>>>>>> 4bdb53c5d273138b16f9ae27a520c1a4ad02945e
           <option name="api" value="32" />
           <option name="brand" value="google" />
           <option name="codename" value="bluejay" />
@@ -430,6 +433,7 @@
         </PersistentDeviceSelectionData>
         <PersistentDeviceSelectionData>
           <option name="api" value="34" />
+<<<<<<< HEAD
           <option name="brand" value="samsung" />
           <option name="codename" value="gts9wifi" />
           <option name="id" value="gts9wifi" />
@@ -442,6 +446,8 @@
         </PersistentDeviceSelectionData>
         <PersistentDeviceSelectionData>
           <option name="api" value="34" />
+=======
+>>>>>>> 4bdb53c5d273138b16f9ae27a520c1a4ad02945e
           <option name="brand" value="google" />
           <option name="codename" value="husky" />
           <option name="id" value="husky" />

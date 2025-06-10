@@ -9,6 +9,8 @@ void main() {
 }
 
 class LoginPage extends StatelessWidget {
+  const LoginPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -40,10 +42,10 @@ class LoginPage extends StatelessWidget {
               Text(
                 'Log In',
                 style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xff628B61),
-              ),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xff628B61),
+                ),
               ),
               Text(
                 'Enter your credentials to log in',
@@ -77,7 +79,7 @@ class LoginPage extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor:  Color(0xff628B61),
                     foregroundColor: Colors.black,
-                ),
+                  ),
 
 
                   onPressed: () {},
@@ -122,7 +124,7 @@ class LoginPage extends StatelessWidget {
                 style: TextStyle(fontSize: 12, color: Colors.black54),
               ),
               SizedBox(height: 20),
-              ],
+            ],
           ),
         ),
       ),
@@ -135,7 +137,7 @@ class SignInButton extends StatelessWidget {
   final String text;
   final VoidCallback onPressed;
 
-  const SignInButton({
+  const SignInButton({super.key,
     required this.icon,
     required this.text,
     required this.onPressed,
