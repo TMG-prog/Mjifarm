@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:mjifarm/Login.dart';
-import 'package:mjifarm/landing.dart';
-import 'package:mjifarm/main.dart';
+import 'landingPage.dart';
 
 
 class Splash extends StatefulWidget {
-  const Splash({Key? key}) : super(key: key);
+  const Splash({super.key});
 
   @override
   State<Splash> createState() => _SplashState();
@@ -61,7 +59,7 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Image.asset(
-                  'assets/Mjifarms.png',
+                  'assets/Mjifarms.jpg',
                   width: 500,
                   height: 500,
                 ),

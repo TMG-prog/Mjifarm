@@ -9,6 +9,8 @@ void main() {
 }
 
 class SignUpPage extends StatelessWidget {
+  const SignUpPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -135,7 +137,7 @@ class SignInButton extends StatelessWidget {
   final String text;
   final VoidCallback onPressed;
 
-  const SignInButton({
+  const SignInButton({super.key, 
     required this.icon,
     required this.text,
     required this.onPressed,
