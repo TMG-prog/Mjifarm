@@ -6,7 +6,12 @@ import 'reminder.dart';
 import 'plants.dart';
 import 'blog.dart';
 //import 'profile.dart';
-
+void main() {
+  runApp(MaterialApp(
+    home: MainScreen(),
+    debugShowCheckedModeBanner: false,
+  ));
+}
 class MainScreen extends StatefulWidget {
   @override
   _MainScreenState createState() => _MainScreenState();
