@@ -31,7 +31,7 @@ class _ReminderPageState extends State<ReminderPage> {
       title: "Buy Seeds",
       description: "Kales & Spinach",
       isDone: false,
-      dueDate: DateTime.now().subtract(Duration(days: 1)),
+      dueDate: DateTime.now().subtract(const Duration(days: 1)),
     ),
     Task(
       title: "Water Crops",
@@ -49,19 +49,24 @@ class _ReminderPageState extends State<ReminderPage> {
       title: "Harvest Tomatoes",
       description: "Fully ripened",
       isDone: false,
-      dueDate: DateTime.now().add(Duration(days: 1)),
+      dueDate: DateTime.now().add(const Duration(days: 1)),
     ),
   ];
 
   @override
   Widget build(BuildContext context) {
     final today = DateTime.now();
+    final selectedDay = _selectedDay ?? today;
+
     final overdueTasks =
         tasks
-            .where((task) => task.dueDate.isBefore(today) && !task.isDone)
+            .where(
+              (task) => task.dueDate.isBefore(today) && !task.isDone,
+            ) // overdue = before today and not done
             .toList();
-    final todaysTasks =
-        tasks.where((task) => isSameDay(task.dueDate, today)).toList();
+
+    final dayTasks =
+        tasks.where((task) => isSameDay(task.dueDate, selectedDay)).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -101,45 +106,64 @@ class _ReminderPageState extends State<ReminderPage> {
             const SizedBox(height: 20),
 
             // Overdue
-            const Text(
-              'Overdue',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            ...overdueTasks.map((task) => overdueTile(task)),
+            if (overdueTasks.isNotEmpty) ...[
+              const Text(
+                'Overdue Tasks',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              ...overdueTasks.map((task) => overdueTile(task)),
+              const SizedBox(height: 20),
+            ],
 
-            const SizedBox(height: 20),
-
-            // Today's Tasks
-            const Text(
-              "Today's Tasks",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            // Tasks for Selected Day
+            Text(
+              isSameDay(selectedDay, today)
+                  ? "Today's Tasks"
+                  : "Tasks for ${selectedDay.toLocal().toString().split(' ')[0]}",
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            ...todaysTasks.map((task) => taskTile(task)),
+            if (dayTasks.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 10),
+                child: Text("No tasks scheduled for this day."),
+              ),
+            ...dayTasks.map((task) => taskTile(task)),
           ],
         ),
       ),
     );
   }
 
+  /// Checkbox task tile
   Widget taskTile(Task task) {
-    return ListTile(
-      leading: Checkbox(
-        value: task.isDone,
-        onChanged: (val) {
-          setState(() {
-            task.isDone = val!;
-          });
-        },
-      ),
-      title: Text(task.title),
-      subtitle: Text(task.description),
-      trailing: Icon(
-        Icons.check_circle,
-        color: task.isDone ? Colors.green : Colors.grey,
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: ListTile(
+        leading: Checkbox(
+          value: task.isDone,
+          onChanged: (val) {
+            setState(() {
+              task.isDone = val!;
+            });
+          },
+        ),
+        title: Text(
+          task.title,
+          style: TextStyle(
+            decoration: task.isDone ? TextDecoration.lineThrough : null,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        subtitle: Text(task.description),
+        trailing: Icon(
+          task.isDone ? Icons.check_circle : Icons.radio_button_unchecked,
+          color: task.isDone ? Colors.green : Colors.grey,
+        ),
       ),
     );
   }
 
+  /// Overdue task banner tile
   Widget overdueTile(Task task) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6),
@@ -153,7 +177,12 @@ class _ReminderPageState extends State<ReminderPage> {
         children: [
           const Icon(Icons.warning_amber_rounded, color: Colors.red),
           const SizedBox(width: 10),
-          Expanded(child: Text('${task.title} - ${task.description}')),
+          Expanded(
+            child: Text(
+              '${task.title} - ${task.description}',
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ),
         ],
       ),
     );

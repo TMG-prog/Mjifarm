@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'plantdetails.dart'; // Make sure this import matches your file structure
 
 class MyPlantsPage extends StatelessWidget {
   const MyPlantsPage({super.key});
@@ -41,7 +42,7 @@ class MyPlantsPage extends StatelessWidget {
               ),
               const SizedBox(height: 20),
 
-              /// Firestore list of plants
+              // Plant list from Firestore
               Expanded(
                 child: StreamBuilder<QuerySnapshot>(
                   stream:
@@ -66,48 +67,72 @@ class MyPlantsPage extends StatelessWidget {
                         final plant =
                             plants[index].data() as Map<String, dynamic>;
 
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 16),
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.green.shade100,
-                                blurRadius: 6,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                backgroundImage: NetworkImage(
-                                  'https://cdn-icons-png.flaticon.com/512/7662/7662059.png',
-                                ), // static for now
-                                radius: 30,
-                              ),
-                              const SizedBox(width: 16),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    plant['name'] ?? 'Unnamed Plant',
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (_) => PlantDetailsPage(
+                                      name: plant['name'] ?? 'Unnamed Plant',
+                                      imagePath:
+                                          plant['imageUrl'] ??
+                                          'assets/plant.png', // Fallback asset
+                                      growthStatus: _determineGrowthStatus(
+                                        plant,
+                                      ),
+                                      growthPercentage:
+                                          _calculateGrowthPercentage(plant),
+                                      harvestDate:
+                                          plant['maturityDate'] ?? 'Unknown',
                                     ),
-                                  ),
-                                  Text(
-                                    _daysUntilHarvestText(plant),
-                                    style: const TextStyle(
-                                      color: Colors.black54,
-                                    ),
-                                  ),
-                                ],
                               ),
-                            ],
+                            );
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.green.shade100,
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  backgroundImage: NetworkImage(
+                                    plant['imageUrl'] ??
+                                        'https://cdn-icons-png.flaticon.com/512/7662/7662059.png',
+                                  ),
+                                  radius: 30,
+                                ),
+                                const SizedBox(width: 16),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      plant['name'] ?? 'Unnamed Plant',
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      _daysUntilHarvestText(plant),
+                                      style: const TextStyle(
+                                        color: Colors.black54,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         );
                       },
@@ -122,7 +147,10 @@ class MyPlantsPage extends StatelessWidget {
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.green,
         onPressed: () {
-          Navigator.pushNamed(context, '/newplant');
+          Navigator.pushNamed(
+            context,
+            '/newplant',
+          ); // Define route in main.dart
         },
         child: const Icon(Icons.add),
       ),
@@ -139,6 +167,41 @@ class MyPlantsPage extends StatelessWidget {
           : 'Ready to harvest!';
     } catch (e) {
       return 'Unknown harvest date';
+    }
+  }
+
+  String _determineGrowthStatus(Map<String, dynamic> plant) {
+    try {
+      final now = DateTime.now();
+      final planting = DateTime.parse(plant['plantingDate']);
+      final maturity = DateTime.parse(plant['maturityDate']);
+      final totalDays = maturity.difference(planting).inDays;
+      final daysPassed = now.difference(planting).inDays;
+
+      if (daysPassed <= 0) return 'Just Planted';
+      if (daysPassed >= totalDays) return 'Ready';
+
+      final percent = (daysPassed / totalDays) * 100;
+      if (percent < 30) return 'Growing';
+      if (percent < 80) return 'Maturing';
+      return 'Almost Ready';
+    } catch (_) {
+      return 'Unknown';
+    }
+  }
+
+  int _calculateGrowthPercentage(Map<String, dynamic> plant) {
+    try {
+      final now = DateTime.now();
+      final planting = DateTime.parse(plant['plantingDate']);
+      final maturity = DateTime.parse(plant['maturityDate']);
+      final totalDays = maturity.difference(planting).inDays;
+      final daysPassed = now.difference(planting).inDays;
+
+      final percent = ((daysPassed / totalDays) * 100).clamp(0, 100);
+      return percent.floor();
+    } catch (_) {
+      return 0;
     }
   }
 }

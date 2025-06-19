@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class BlogPage extends StatefulWidget {
   const BlogPage({super.key});
@@ -8,17 +9,15 @@ class BlogPage extends StatefulWidget {
 }
 
 class _BlogPageState extends State<BlogPage> {
-  final List<String> categories = ["All", "Tips", "Health", "Crops", "News"];
+  final List<String> categories = [
+    "All",
+    "Tips",
+    "Health",
+    "Crops",
+    "News",
+    "Trending",
+  ];
   String selectedCategory = "All";
-
-  List<Map<String, dynamic>> articles = List.generate(
-    8,
-    (index) => {
-      "title": "Lorem ipsum dolor sit amet, consectetur",
-      "imageUrl": "https://via.placeholder.com/150",
-      "isFavorite": index % 2 == 0,
-    },
-  );
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +30,7 @@ class _BlogPageState extends State<BlogPage> {
       ),
       body: Column(
         children: [
-          // Categories
+          // Category Chips
           SizedBox(
             height: 50,
             child: ListView.builder(
@@ -59,15 +58,38 @@ class _BlogPageState extends State<BlogPage> {
 
           const SizedBox(height: 10),
 
-          // Article Grid
+          // Blog Articles from Firestore
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: [
-                section("Featured"),
-                const SizedBox(height: 16),
-                section("Latest"),
-              ],
+            child: StreamBuilder<QuerySnapshot>(
+              stream:
+                  selectedCategory == "All"
+                      ? FirebaseFirestore.instance
+                          .collection('articles')
+                          .snapshots()
+                      : FirebaseFirestore.instance
+                          .collection('articles')
+                          .where('category', isEqualTo: selectedCategory)
+                          .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Center(child: Text("No articles found"));
+                }
+
+                List<DocumentSnapshot> docs = snapshot.data!.docs;
+
+                return ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  children: [
+                    section("Featured", docs),
+                    const SizedBox(height: 16),
+                    section("Latest", docs),
+                  ],
+                );
+              },
             ),
           ),
         ],
@@ -75,7 +97,7 @@ class _BlogPageState extends State<BlogPage> {
     );
   }
 
-  Widget section(String title) {
+  Widget section(String title, List<DocumentSnapshot> docs) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -94,19 +116,20 @@ class _BlogPageState extends State<BlogPage> {
           height: 200,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            itemCount: articles.length,
-            itemBuilder: (context, index) {
-              final article = articles[index];
-              return blogCard(article, index);
-            },
+            itemCount: docs.length,
             separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              Map<String, dynamic> article =
+                  docs[index].data() as Map<String, dynamic>;
+              return blogCard(article);
+            },
           ),
         ),
       ],
     );
   }
 
-  Widget blogCard(Map<String, dynamic> article, int index) {
+  Widget blogCard(Map<String, dynamic> article) {
     return Container(
       width: 140,
       decoration: BoxDecoration(
@@ -115,43 +138,26 @@ class _BlogPageState extends State<BlogPage> {
       ),
       child: Column(
         children: [
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(12),
-                ),
-                child: Image.network(
-                  article["imageUrl"],
-                  height: 100,
-                  width: 140,
-                  fit: BoxFit.cover,
-                ),
-              ),
-              Positioned(
-                top: 8,
-                right: 8,
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      articles[index]["isFavorite"] =
-                          !articles[index]["isFavorite"];
-                    });
-                  },
-                  child: Icon(
-                    article["isFavorite"]
-                        ? Icons.favorite
-                        : Icons.favorite_border,
-                    color: article["isFavorite"] ? Colors.red : Colors.black,
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+            child: Image.network(
+              article["imageUrl"] ?? '',
+              height: 100,
+              width: 140,
+              fit: BoxFit.cover,
+              errorBuilder:
+                  (context, error, stackTrace) => Container(
+                    height: 100,
+                    width: 140,
+                    color: Colors.grey,
+                    child: const Icon(Icons.broken_image),
                   ),
-                ),
-              ),
-            ],
+            ),
           ),
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Text(
-              article["title"],
+              article["title"] ?? '',
               style: const TextStyle(fontSize: 12),
               maxLines: 3,
               overflow: TextOverflow.ellipsis,

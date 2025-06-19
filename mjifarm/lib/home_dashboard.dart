@@ -1,10 +1,84 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'newplant.dart'; // Import this
-import 'plants.dart'; // Optional if routing directly
+import 'package:table_calendar/table_calendar.dart';
+import 'newplant.dart';
+import 'plants.dart';
+import 'weather.dart';
 
-class HomeDashboard extends StatelessWidget {
+class Task {
+  String title;
+  String description;
+  bool isDone;
+  DateTime dueDate;
+
+  Task({
+    required this.title,
+    required this.description,
+    required this.isDone,
+    required this.dueDate,
+  });
+}
+
+class HomeDashboard extends StatefulWidget {
+  @override
+  _HomeDashboardState createState() => _HomeDashboardState();
+}
+
+class _HomeDashboardState extends State<HomeDashboard> {
+  final List<Task> tasks = [
+    Task(
+      title: "Buy Seeds",
+      description: "Kales & Spinach",
+      isDone: false,
+      dueDate: DateTime.now().subtract(const Duration(days: 1)),
+    ),
+    Task(
+      title: "Water Crops",
+      description: "Early morning",
+      isDone: false,
+      dueDate: DateTime.now(),
+    ),
+    Task(
+      title: "Check Pests",
+      description: "Inspect for aphids",
+      isDone: true,
+      dueDate: DateTime.now(),
+    ),
+    Task(
+      title: "Harvest Tomatoes",
+      description: "Fully ripened",
+      isDone: false,
+      dueDate: DateTime.now().add(const Duration(days: 1)),
+    ),
+  ];
+
+  Future<String> fetchTipOfTheDay() async {
+    final today = DateTime.now();
+    final todayStr = "${today.year}-${today.month}-${today.day}";
+
+    final tipQuery =
+        await FirebaseFirestore.instance
+            .collection("Tips")
+            .where("date", isEqualTo: todayStr)
+            .get();
+
+    if (tipQuery.docs.isNotEmpty) {
+      return tipQuery.docs.first.data()['Tip'];
+    } else {
+      final randomTip =
+          await FirebaseFirestore.instance.collection("Tips").limit(1).get();
+      return randomTip.docs.first.data()['Tip'];
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final overdueTasks =
+        tasks
+            .where((task) => task.dueDate.isBefore(now) && !task.isDone)
+            .toList();
+
     return SafeArea(
       child: SingleChildScrollView(
         child: Padding(
@@ -25,24 +99,62 @@ class HomeDashboard extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
               // Pending tasks and weather alerts
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildCard('Pending task'),
-                  _buildCard('Alert weather/\nbreakouts'),
+                  _buildCardWithTasks("Pending Tasks", overdueTasks),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => WeatherPage()),
+                      );
+                    },
+                    child: _buildCard("Alert weather/\nbreakouts"),
+                  ),
                 ],
               ),
-              SizedBox(height: 25),
+              const SizedBox(height: 25),
 
               Text(
                 'Hello Tracy,',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-              SizedBox(height: 5),
-              Text('Tip of the day', style: TextStyle(color: Colors.black54)),
-              SizedBox(height: 20),
+              const SizedBox(height: 5),
+
+              // Tip of the day
+              FutureBuilder<String>(
+                future: fetchTipOfTheDay(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Text(
+                      "Loading tip...",
+                      style: TextStyle(fontStyle: FontStyle.italic),
+                    );
+                  } else if (snapshot.hasError) {
+                    print("🔥 Snapshot error: ${snapshot.error}");
+                    return Text("⚠️ Error: ${snapshot.error}");
+                  } else {
+                    return Card(
+                      color: Colors.green.shade50,
+                      margin: const EdgeInsets.only(top: 10, bottom: 20),
+                      child: Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: Text(
+                          "🌿 ${snapshot.data}",
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+                },
+              ),
 
               // In the Farm
               GestureDetector(
@@ -54,7 +166,7 @@ class HomeDashboard extends StatelessWidget {
                 },
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
+                  children: const [
                     Text(
                       'In the Farm',
                       style: TextStyle(
@@ -66,7 +178,7 @@ class HomeDashboard extends StatelessWidget {
                   ],
                 ),
               ),
-              SizedBox(height: 15),
+              const SizedBox(height: 15),
               SizedBox(
                 height: 90,
                 child: ListView(
@@ -76,11 +188,11 @@ class HomeDashboard extends StatelessWidget {
                   ],
                 ),
               ),
-              SizedBox(height: 25),
+              const SizedBox(height: 25),
 
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
+                children: const [
                   Text(
                     'Trending practices',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -88,7 +200,7 @@ class HomeDashboard extends StatelessWidget {
                   Icon(Icons.chevron_right),
                 ],
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               SizedBox(
                 height: 180,
                 child: ListView(
@@ -117,17 +229,49 @@ class HomeDashboard extends StatelessWidget {
   Widget _buildCard(String title) {
     return Container(
       width: 160,
-      margin: EdgeInsets.only(right: 10),
-      padding: EdgeInsets.all(20),
+      margin: const EdgeInsets.only(right: 10),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Color(0xffb0e8b2),
+        color: const Color(0xffb0e8b2),
         borderRadius: BorderRadius.circular(15),
       ),
       child: Center(child: Text(title, textAlign: TextAlign.center)),
     );
   }
 
-  Widget _buildFarmCircle(
+  Widget _buildCardWithTasks(String title, List<Task> overdueTasks) {
+    return Container(
+      width: 160,
+      margin: const EdgeInsets.only(right: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xffb0e8b2),
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          if (overdueTasks.isEmpty)
+            const Text("No pending tasks", style: TextStyle(fontSize: 12))
+          else
+            ...overdueTasks.map(
+              (task) => Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(
+                  "• ${task.title}",
+                  style: const TextStyle(fontSize: 12),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  static Widget _buildFarmCircle(
     BuildContext context, {
     IconData? icon,
     String? image,
@@ -143,7 +287,7 @@ class HomeDashboard extends StatelessWidget {
         }
       },
       child: Container(
-        margin: EdgeInsets.only(right: 15),
+        margin: const EdgeInsets.only(right: 15),
         child: Column(
           children: [
             CircleAvatar(
@@ -163,18 +307,18 @@ class HomeDashboard extends StatelessWidget {
                       )
                       : null,
             ),
-            SizedBox(height: 5),
-            Text(label, style: TextStyle(fontSize: 12)),
+            const SizedBox(height: 5),
+            Text(label, style: const TextStyle(fontSize: 12)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTrendingCard(String image, String brand, String label) {
+  static Widget _buildTrendingCard(String image, String brand, String label) {
     return Container(
       width: 130,
-      margin: EdgeInsets.only(right: 15),
+      margin: const EdgeInsets.only(right: 15),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -190,13 +334,13 @@ class HomeDashboard extends StatelessWidget {
                     color: Colors.grey[300],
                     height: 100,
                     width: 130,
-                    child: Icon(Icons.broken_image),
+                    child: const Icon(Icons.broken_image),
                   ),
             ),
           ),
-          SizedBox(height: 5),
-          Text(brand, style: TextStyle(fontWeight: FontWeight.bold)),
-          Text(label, style: TextStyle(color: Colors.black54)),
+          const SizedBox(height: 5),
+          Text(brand, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text(label, style: const TextStyle(color: Colors.black54)),
         ],
       ),
     );
