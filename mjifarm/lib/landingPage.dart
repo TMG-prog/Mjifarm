@@ -11,18 +11,12 @@ class LandingPage extends StatelessWidget {
       body: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 32),
-        decoration: const BoxDecoration(
-          color: Color(0xFFE8F6EE), // Pale mint green background
-        ),
+        decoration: const BoxDecoration(color: Color(0xFFE8F6EE)),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // App Logo
-            Image.asset(
-              'assets/Mjifarms.jpg',
-              width: 200,
-              height: 200,
-            ),
+            Image.asset('assets/Mjifarms.jpg', width: 200, height: 200),
             const SizedBox(height: 20),
 
             // Mantra

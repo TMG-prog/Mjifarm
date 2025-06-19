@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'plants.dart';
 
 class NewPlantPage extends StatefulWidget {
   @override
@@ -54,6 +56,98 @@ class _NewPlantPageState extends State<NewPlantPage> {
     }
   }
 
+  Future<void> _savePlant() async {
+    if (_nameController.text.isEmpty ||
+        _selectedCategory == null ||
+        _selectedContainer == null ||
+        _selectedGarden == null ||
+        _plantingDate == null ||
+        _maturityDate == null) {
+      _showError('Please fill in all fields before saving.');
+      return;
+    }
+
+    await FirebaseFirestore.instance.collection('plants').add({
+      'name': _nameController.text,
+      'category': _selectedCategory,
+      'container': _selectedContainer,
+      'garden': _selectedGarden,
+      'plantingDate': _plantingDate!.toIso8601String(),
+      'maturityDate': _maturityDate!.toIso8601String(),
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+
+    _showSuccess();
+  }
+
+  void _showError(String message) {
+    showDialog(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: Text('Missing Information'),
+            content: Text(message),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('OK'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  void _showSuccess() {
+    showDialog(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: Text('Success'),
+            content: Text('Plant saved!'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacementNamed(context, '/myplants');
+                },
+                child: Text('OK'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  ListTile _buildDropdown(
+    String title,
+    List<String> items,
+    String? selectedValue,
+    Function(String?) onChanged,
+  ) {
+    return ListTile(
+      title: Text(title),
+      trailing: DropdownButton<String>(
+        hint: Text('Select'),
+        value: selectedValue,
+        onChanged: onChanged,
+        items:
+            items
+                .map((val) => DropdownMenuItem(value: val, child: Text(val)))
+                .toList(),
+      ),
+    );
+  }
+
+  ListTile _buildDateTile(String title, DateTime? date, VoidCallback onTap) {
+    return ListTile(
+      title: Text(title),
+      subtitle: Text(
+        date == null ? 'Select date' : '${date.toLocal()}'.split(' ')[0],
+      ),
+      trailing: Icon(Icons.calendar_today),
+      onTap: onTap,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -67,13 +161,14 @@ class _NewPlantPageState extends State<NewPlantPage> {
         padding: const EdgeInsets.all(10.0),
         child: Column(
           children: [
-            Center(
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  CircleAvatar(radius: 50, backgroundColor: Colors.grey[300]),
-                  Icon(Icons.camera_alt, size: 30, color: Colors.black54),
-                ],
+            GestureDetector(
+              onTap: () {
+                Navigator.pushNamed(context, '/myplants');
+              },
+              child: CircleAvatar(
+                radius: 50,
+                backgroundColor: Colors.grey[300],
+                child: Icon(Icons.camera_alt, size: 30, color: Colors.black54),
               ),
             ),
             SizedBox(height: 20),
@@ -88,171 +183,55 @@ class _NewPlantPageState extends State<NewPlantPage> {
               trailing: Icon(Icons.chevron_right),
             ),
             Divider(),
-            ListTile(
-              title: Text('Category'),
-              trailing: DropdownButton<String>(
-                hint: Text('Select'),
-                value: _selectedCategory,
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedCategory = newValue;
-                  });
-                },
-                items:
-                    _categories.map((String category) {
-                      return DropdownMenuItem<String>(
-                        value: category,
-                        child: Text(category),
-                      );
-                    }).toList(),
-              ),
+            _buildDropdown(
+              'Category',
+              _categories,
+              _selectedCategory,
+              (val) => setState(() => _selectedCategory = val),
             ),
-            Divider(),
-            ListTile(
-              title: Text('Container Type'),
-              trailing: DropdownButton<String>(
-                hint: Text('Select'),
-                value: _selectedContainer,
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedContainer = newValue;
-                  });
-                },
-                items:
-                    _containerTypes.map((String type) {
-                      return DropdownMenuItem<String>(
-                        value: type,
-                        child: Text(type),
-                      );
-                    }).toList(),
-              ),
+            _buildDropdown(
+              'Container Type',
+              _containerTypes,
+              _selectedContainer,
+              (val) => setState(() => _selectedContainer = val),
             ),
-            Divider(),
-            ListTile(
-              title: Text('Garden Type'),
-              trailing: DropdownButton<String>(
-                hint: Text('Select'),
-                value: _selectedGarden,
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedGarden = newValue;
-                  });
-                },
-                items:
-                    _gardenTypes.map((String garden) {
-                      return DropdownMenuItem<String>(
-                        value: garden,
-                        child: Text(garden),
-                      );
-                    }).toList(),
-              ),
+            _buildDropdown(
+              'Garden Type',
+              _gardenTypes,
+              _selectedGarden,
+              (val) => setState(() => _selectedGarden = val),
             ),
-            Divider(),
             Row(
               children: [
                 Expanded(
-                  child: ListTile(
-                    title: Text('Planting Date'),
-                    subtitle: Text(
-                      _plantingDate == null
-                          ? 'Select date'
-                          : '${_plantingDate!.toLocal()}'.split(' ')[0],
-                    ),
-                    trailing: Icon(Icons.calendar_today),
-                    onTap: () => _selectDate(context, true),
+                  child: _buildDateTile(
+                    'Planting Date',
+                    _plantingDate,
+                    () => _selectDate(context, true),
                   ),
                 ),
-                SizedBox(width: 10), // spacing between the two
+                SizedBox(width: 10),
                 Expanded(
-                  child: ListTile(
-                    title: Text('Maturity Date'),
-                    subtitle: Text(
-                      _maturityDate == null
-                          ? 'Select date'
-                          : '${_maturityDate!.toLocal()}'.split(' ')[0],
-                    ),
-                    trailing: Icon(Icons.calendar_today),
-                    onTap: () => _selectDate(context, false),
+                  child: _buildDateTile(
+                    'Maturity Date',
+                    _maturityDate,
+                    () => _selectDate(context, false),
                   ),
                 ),
               ],
             ),
             Divider(),
-            Spacer(),
-            MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: ElevatedButton(
-                onPressed: () async {
-                  if (_nameController.text.isEmpty ||
-                      _selectedCategory == null ||
-                      _selectedContainer == null ||
-                      _selectedGarden == null ||
-                      _plantingDate == null ||
-                      _maturityDate == null) {
-                    // Show error popup
-                    showDialog(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return AlertDialog(
-                          title: Text('Missing Information'),
-                          content: Text(
-                            'Please fill in all fields before saving.',
-                          ),
-                          actions: [
-                            TextButton(
-                              child: Text('OK'),
-                              onPressed: () => Navigator.of(context).pop(),
-                            ),
-                          ],
-                        );
-                      },
-                    );
-                  } else {
-                    // Showing confirmation dialog
-                    showDialog(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return AlertDialog(
-                          title: Text('Success'),
-                          content: Text('Plant saved successfully!'),
-                          actions: [
-                            TextButton(
-                              child: Text('OK'),
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                                Navigator.pushReplacementNamed(
-                                  context,
-                                  '/home',
-                                ); // Redirect
-                              },
-                            ),
-                          ],
-                        );
-                      },
-                    );
-                  }
-                },
-                style: ButtonStyle(
-                  minimumSize: WidgetStateProperty.all<Size>(
-                    Size(double.infinity, 50),
-                  ),
-                  shape: WidgetStateProperty.all<RoundedRectangleBorder>(
-                    RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(50),
-                    ),
-                  ),
-                  backgroundColor: WidgetStateProperty.resolveWith<Color>((
-                    states,
-                  ) {
-                    if (states.contains(WidgetState.hovered)) {
-                      return Colors.green.shade700;
-                    }
-                    return const Color.fromARGB(255, 34, 94, 36);
-                  }),
-                  foregroundColor: WidgetStateProperty.all<Color>(Colors.white),
+            ElevatedButton(
+              onPressed: _savePlant,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color.fromARGB(255, 34, 94, 36),
+                foregroundColor: Colors.white,
+                minimumSize: Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(50),
                 ),
-                child: Text('Save', style: TextStyle(fontSize: 18)),
               ),
+              child: Text('Save', style: TextStyle(fontSize: 18)),
             ),
           ],
         ),

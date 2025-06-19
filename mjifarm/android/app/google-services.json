@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "648236907977",
+    "project_id": "urbanapp-84391",
+    "storage_bucket": "urbanapp-84391.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:648236907977:android:abf6e795b20f1274cdfc18",
+        "android_client_info": {
+          "package_name": "com.example.mjifarm"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAGvRp65cDDm6Akj8J8sLLC5Vm67ujlEaM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
