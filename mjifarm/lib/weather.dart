@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
-
+void main() {
+  runApp(MaterialApp(
+    home: WeatherPage(),
+    debugShowCheckedModeBanner: false,
+  ));
+}
 class WeatherPage extends StatelessWidget {
   const WeatherPage({super.key});
 

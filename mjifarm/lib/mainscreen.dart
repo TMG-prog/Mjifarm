@@ -4,6 +4,7 @@ import 'package:mjifarm/experts.dart';
 import 'home_dashboard.dart';
 import 'reminder.dart';
 import 'plants.dart';
+import 'diagnosis.dart';
 import 'blog.dart';
 import 'fprofile.dart';
 
@@ -18,7 +19,7 @@ class _MainScreenState extends State<MainScreen> {
   final List<Widget> _pages = [
     HomeDashboard(),
     ReminderPage(),
-    MyPlantsPage(),
+    MyDiagnosisScreen(),
     BlogPage(),
     FarmerProfilePage(),
     ContactExpertPage(),

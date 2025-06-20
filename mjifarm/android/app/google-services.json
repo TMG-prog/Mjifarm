@@ -1,26 +1,88 @@
 {
   "project_info": {
-    "project_number": "648236907977",
-    "project_id": "urbanapp-84391",
-    "storage_bucket": "urbanapp-84391.firebasestorage.app"
+    "project_number": "535637157454",
+    "firebase_url": "https://project-theta-a1044-default-rtdb.firebaseio.com",
+    "project_id": "project-theta-a1044",
+    "storage_bucket": "project-theta-a1044.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:648236907977:android:abf6e795b20f1274cdfc18",
+        "mobilesdk_app_id": "1:535637157454:android:7226e39a75602ec2e5051f",
         "android_client_info": {
           "package_name": "com.example.mjifarm"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "535637157454-cn72t4ssrmr4hl7j90o0psb4u5k92159.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyAGvRp65cDDm6Akj8J8sLLC5Vm67ujlEaM"
+          "current_key": "AIzaSyDBDy0x7XZayvRwO-SKoUZf8Dcdes3GOkM"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "535637157454-cn72t4ssrmr4hl7j90o0psb4u5k92159.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "535637157454-8q5ouqc39tpkm3gsufssov24mc5fe471.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.mjifarms"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:535637157454:android:cb5bd399db9374f1e5051f",
+        "android_client_info": {
+          "package_name": "com.example.mjifarms"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "535637157454-pdie3h2ove6qqj6ihbohonohhd5r9hrf.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.mjifarms",
+            "certificate_hash": "bf75e461babe4db4eba5a044ecf655ad4a19334d"
+          }
+        },
+        {
+          "client_id": "535637157454-cn72t4ssrmr4hl7j90o0psb4u5k92159.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDBDy0x7XZayvRwO-SKoUZf8Dcdes3GOkM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "535637157454-cn72t4ssrmr4hl7j90o0psb4u5k92159.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "535637157454-8q5ouqc39tpkm3gsufssov24mc5fe471.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.mjifarms"
+              }
+            }
+          ]
         }
       }
     }
