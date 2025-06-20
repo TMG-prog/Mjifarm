@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-
 void main() {
   runApp(MaterialApp(
     home: LoginPage(),
@@ -40,12 +39,12 @@ class LoginPage extends StatelessWidget {
               ),
               SizedBox(height: 30),
               Text(
-                'Log In',
+                'Log In As an Expert',
                 style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xff628B61),
-                ),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xff628B61),
+              ),
               ),
               Text(
                 'Enter your credentials to log in',
@@ -79,10 +78,13 @@ class LoginPage extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor:  Color(0xff628B61),
                     foregroundColor: Colors.black,
-                  ),
+                ),
 
 
-                  onPressed: () {},
+                  onPressed: () async {
+
+
+                  },
                   child: Text('Log In'),
                 ),
               ),
@@ -124,7 +126,7 @@ class LoginPage extends StatelessWidget {
                 style: TextStyle(fontSize: 12, color: Colors.black54),
               ),
               SizedBox(height: 20),
-            ],
+              ],
           ),
         ),
       ),
@@ -137,7 +139,7 @@ class SignInButton extends StatelessWidget {
   final String text;
   final VoidCallback onPressed;
 
-  const SignInButton({super.key,
+  const SignInButton({super.key, 
     required this.icon,
     required this.text,
     required this.onPressed,
