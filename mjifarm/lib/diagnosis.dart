@@ -5,10 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data'; // For Uint8List
 import 'dart:convert';
 
-// Import geolocator for location
-// Import your Plant Identification page
-// ... other imports for Firebase, http, image_picker etc.
-// Ensure you have the callPlantDiagnosisVercel function defined as previously discussed.
+
 class MyDiagnosisScreen extends StatefulWidget {
   const MyDiagnosisScreen({super.key});
 
