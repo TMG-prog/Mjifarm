@@ -1,0 +1,72 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        // User can read/write their own profile
+        ".read": "auth != null && auth.uid == $uid",
+        // User can write their own profile, OR Admin can write to any profile
+        ".write": "auth != null && (auth.uid == $uid || root.child('users').child(auth.uid).child('isAdmin').val() === true)"
+      },
+      // Admin can read all users (for user management)
+      ".read": "auth != null && root.child('users').child(auth.uid).child('isAdmin').val() === true",
+      // Admin can create new user entries (e.g., when adding an expert's DB profile)
+      ".write": "auth != null && root.child('users').child(auth.uid).child('isAdmin').val() === true"
+    },
+  "expert_profiles": {
+      // Any authenticated user can read ALL expert profiles
+      ".read": "auth != null",
+      
+      // Allow admins to CREATE new expert profiles (top-level write),
+      // where the key will be the new expert's Firebase Auth UID
+      ".write": "auth != null && root.child('users').child(auth.uid).child('isAdmin').val() === true",
+      
+      "$expertAuthUid": { // This dynamic segment now directly represents the Firebase Auth UID
+        // Allows an expert to write to their OWN profile (if their Auth UID matches the key)
+        // OR an Admin can write to any expert's profile.
+        // The 'userID' field inside the data becomes redundant if it's always the same as $expertAuthUid,
+        // so you can simplify this to: "auth != null && (auth.uid == $expertAuthUid || root.child('users').child(auth.uid).child('isAdmin').val() === true)"
+        ".write": "auth != null && (auth.uid == $expertAuthUid || root.child('users').child(auth.uid).child('isAdmin').val() === true)"
+      }
+    },
+    "crop_info": {
+      ".read": true, // Publicly readable by all (even unauthenticated)
+      ".write": "auth != null && root.child('users').child(auth.uid).child('isAdmin').val() === true" // Only admins can write
+    },
+    "gardens": {
+      "$gardenId": {
+        // User can only read their own gardens (based on 'userID' field in garden data)
+        ".read": "auth != null && data.child('userID').val() == auth.uid",
+        // User can write their own, OR Admin can write to any garden
+        ".write": "auth != null && (data.child('userID').val() == auth.uid || root.child('users').child(auth.uid).child('isAdmin').val() === true)",
+        "plants": {
+          "$plantId": {
+            // User can read/write plants within their own garden
+            ".read": "auth != null && root.child('gardens').child($gardenId).child('userID').val() == auth.uid",
+            ".write": "auth != null && (root.child('gardens').child($gardenId).child('userID').val() == auth.uid || root.child('users').child(auth.uid).child('isAdmin').val() === true)"
+          }
+        }
+      }
+    },
+    "crop_logs": {
+      "$logId": {
+        // Farmer can read/write their own log (based on 'userID' field)
+        ".read": "auth != null && data.child('userID').val() == auth.uid",
+        ".write": "auth != null && (data.child('userID').val() == auth.uid || root.child('users').child(auth.uid).child('isAdmin').val() === true)",
+        "diagnoses": {
+          // Farmer can read their own diagnoses, Admin can read.
+          // NEW: EXPERT CAN ALSO READ.
+          ".read": "auth != null && (root.child('crop_logs').child($logId).child('userID').val() == auth.uid || root.child('users').child(auth.uid).child('isAdmin').val() === true || root.child('users').child(auth.uid).child('userRole').hasChild('expert'))",
+          // Farmer can write their own, Admin can write.
+          // NEW: EXPERT MUST BE ABLE TO WRITE DIAGNOSES!
+          ".write": "auth != null && (root.child('crop_logs').child($logId).child('userID').val() == auth.uid || root.child('users').child(auth.uid).child('isAdmin').val() === true || root.child('users').child(auth.uid).child('userRole').hasChild('expert'))"
+        }
+      },
+      // Admin can read all crop logs for dashboard overview.
+      // NEW: Experts also need to read all crop logs (or query for pending ones) for their dashboard.
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('isAdmin').val() === true || root.child('users').child(auth.uid).child('userRole').hasChild('expert'))"
+    },
+    // Deny all other access by default
+    ".read": "false",
+    ".write": "false"
+  }
+}
