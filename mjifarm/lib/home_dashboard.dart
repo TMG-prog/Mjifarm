@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:mjifarm/experts.dart';
+import 'package:mjifarm/pests.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'newplant.dart';
 import 'plants.dart';
@@ -53,22 +55,37 @@ class _HomeDashboardState extends State<HomeDashboard> {
   ];
 
   Future<String> fetchTipOfTheDay() async {
-    final today = DateTime.now();
-    final todayStr = "${today.year}-${today.month}-${today.day}";
+    try {
+      final today = DateTime.now();
+      final todayStr = "${today.year}-${today.month}-${today.day}";
 
-    final tipQuery =
-        await FirebaseFirestore.instance
-            .collection("Tips")
-            .where("date", isEqualTo: todayStr)
-            .get();
+      final tipQuery =
+          await FirebaseFirestore.instance
+              .collection("Tips")
+              .where("date", isEqualTo: todayStr)
+              .get();
 
-    if (tipQuery.docs.isNotEmpty) {
-      return tipQuery.docs.first.data()['Tip'];
-    } else {
-      final randomTip =
-          await FirebaseFirestore.instance.collection("Tips").limit(1).get();
-      return randomTip.docs.first.data()['Tip'];
+      if (tipQuery.docs.isNotEmpty) {
+        return tipQuery.docs.first.data()['Tip'];
+      } else {
+        final randomTip =
+            await FirebaseFirestore.instance.collection("Tips").limit(1).get();
+        if (randomTip.docs.isNotEmpty) {
+          return randomTip.docs.first.data()['Tip'];
+        } else {
+          return "No tip available today.";
+        }
+      }
+    } catch (e) {
+      print(" Error fetching tip: $e");
+      return "Could not load tip today.";
     }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchPlants() async {
+    final querySnapshot =
+        await FirebaseFirestore.instance.collection("plants").get();
+    return querySnapshot.docs.map((doc) => doc.data()).toList();
   }
 
   @override
@@ -79,96 +96,144 @@ class _HomeDashboardState extends State<HomeDashboard> {
             .where((task) => task.dueDate.isBefore(now) && !task.isDone)
             .toList();
 
-    return SafeArea(
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(15),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Search bar
-              TextField(
-                decoration: InputDecoration(
-                  hintText: 'Search',
-                  prefixIcon: Icon(Icons.search),
-                  filled: true,
-                  fillColor: Colors.grey.shade200,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide.none,
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(15),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Search
+                TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Search',
+                    prefixIcon: Icon(Icons.search),
+                    filled: true,
+                    fillColor: Colors.grey.shade200,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 20),
+                const SizedBox(height: 20),
 
-              // Pending tasks and weather alerts
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildCardWithTasks("Pending Tasks", overdueTasks),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => WeatherPage()),
+                // Tasks and Weather
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildCardWithTasks("Pending Tasks", overdueTasks),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => WeatherPage()),
+                        );
+                      },
+                      child: _buildCard("Alert weather/\nbreakouts"),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 25),
+
+                // Greeting
+                Text(
+                  'Hello Tracy,',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 5),
+
+                // Tip of the Day
+                FutureBuilder<String>(
+                  future: fetchTipOfTheDay(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Text(
+                        "🌱 Loading tip...",
+                        style: TextStyle(fontStyle: FontStyle.italic),
                       );
-                    },
-                    child: _buildCard("Alert weather/\nbreakouts"),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 25),
-
-              Text(
-                'Hello Tracy,',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 5),
-
-              // Tip of the day
-              FutureBuilder<String>(
-                future: fetchTipOfTheDay(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Text(
-                      "Loading tip...",
-                      style: TextStyle(fontStyle: FontStyle.italic),
-                    );
-                  } else if (snapshot.hasError) {
-                    print("🔥 Snapshot error: ${snapshot.error}");
-                    return Text("⚠️ Error: ${snapshot.error}");
-                  } else {
-                    return Card(
-                      color: Colors.green.shade50,
-                      margin: const EdgeInsets.only(top: 10, bottom: 20),
-                      child: Padding(
-                        padding: const EdgeInsets.all(10),
-                        child: Text(
-                          "🌿 ${snapshot.data}",
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontStyle: FontStyle.italic,
+                    } else if (snapshot.hasError) {
+                      return Text("⚠️ Error: ${snapshot.error}");
+                    } else {
+                      return Card(
+                        color: Colors.green.shade50,
+                        margin: const EdgeInsets.only(top: 10, bottom: 20),
+                        child: Padding(
+                          padding: const EdgeInsets.all(10),
+                          child: Text(
+                            "🌿 ${snapshot.data}",
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontStyle: FontStyle.italic,
+                            ),
                           ),
                         ),
+                      );
+                    }
+                  },
+                ),
+
+                // In the Farm
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => MyPlantsPage()),
+                    );
+                  },
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: const [
+                      Text(
+                        'In the Farm',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      Icon(Icons.chevron_right),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 15),
+
+                // Plant Circles
+                FutureBuilder<List<Map<String, dynamic>>>(
+                  future: fetchPlants(),
+                  builder: (context, snapshot) {
+                    final plants = snapshot.data ?? [];
+                    return SizedBox(
+                      height: 90,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        children: [
+                          _buildFarmCircle(
+                            context,
+                            icon: Icons.add,
+                            label: 'Add',
+                          ),
+                          ...plants.map((plant) {
+                            return _buildFarmCircle(
+                              context,
+                              image: plant['imagePath'],
+                              label: plant['name'],
+                            );
+                          }).toList(),
+                        ],
                       ),
                     );
-                  }
-                },
-              ),
+                  },
+                ),
+                const SizedBox(height: 25),
 
-              // In the Farm
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => MyPlantsPage()),
-                  );
-                },
-                child: Row(
+                // Trending
+                Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: const [
                     Text(
-                      'In the Farm',
+                      'Trending practices',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -177,49 +242,84 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     Icon(Icons.chevron_right),
                   ],
                 ),
-              ),
-              const SizedBox(height: 15),
-              SizedBox(
-                height: 90,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    _buildFarmCircle(context, icon: Icons.add, label: 'Add'),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 25),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Text(
-                    'Trending practices',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: 180,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      _buildTrendingCard(
+                        'assets/sample1.jpg',
+                        'Compost Tips',
+                        'Best composting for urban farms',
+                      ),
+                      _buildTrendingCard(
+                        'assets/sample2.jpg',
+                        'Irrigation Hacks',
+                        'Low-budget watering system',
+                      ),
+                    ],
                   ),
-                  Icon(Icons.chevron_right),
-                ],
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                height: 180,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
+                ),
+                const SizedBox(height: 20),
+
+                // Quick Access
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _buildTrendingCard(
-                      'assets/sample1.jpg',
-                      'Compost Tips',
-                      'Best composting for urban farms',
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ContactExpertPage(),
+                          ),
+                        );
+                      },
+                      icon: Icon(Icons.support_agent),
+                      label: Text("Contact Experts"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green.shade700,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 15,
+                          vertical: 10,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
                     ),
-                    _buildTrendingCard(
-                      'assets/sample2.jpg',
-                      'Irrigation Hacks',
-                      'Low-budget watering system',
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => PestAlertPage()),
+                        );
+                      },
+                      icon: Icon(Icons.bug_report),
+                      label: Text("Pest Alerts"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color.fromARGB(
+                          255,
+                          140,
+                          236,
+                          145,
+                        ),
+                        foregroundColor: const Color.fromARGB(255, 11, 11, 11),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 15,
+                          vertical: 10,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
                     ),
                   ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -298,14 +398,17 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       ? Icon(icon, size: 30, color: Colors.black)
                       : image != null && image.isNotEmpty
                       ? ClipOval(
-                        child: Image.asset(
+                        child: Image.network(
                           image,
-                          fit: BoxFit.cover,
                           height: 60,
                           width: 60,
+                          fit: BoxFit.cover,
+                          errorBuilder:
+                              (context, error, stackTrace) =>
+                                  Icon(Icons.broken_image),
                         ),
                       )
-                      : null,
+                      : Icon(Icons.grass, color: Colors.green),
             ),
             const SizedBox(height: 5),
             Text(label, style: const TextStyle(fontSize: 12)),

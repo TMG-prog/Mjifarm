@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:mjifarm/mainscreen.dart';
 import 'package:mjifarm/newplant.dart';
 import 'package:mjifarm/plants.dart';
+import 'package:mjifarm/splash.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,6 +31,7 @@ class MyApp extends StatelessWidget {
         '/': (context) => MainScreen(),
         '/myplants': (context) => MyPlantsPage(), // <-- add this
         '/newplant': (context) => NewPlantPage(), // optional
+        '/splash': (context) => Splash(),
       },
     );
   }

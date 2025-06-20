@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'landingPage.dart';
 
-
 class Splash extends StatefulWidget {
   const Splash({super.key});
 
@@ -31,7 +30,7 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
     await Future.delayed(const Duration(seconds: 10)); // Increased duration
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) =>  LandingPage()),
+      MaterialPageRoute(builder: (context) => LandingPage()),
     );
   }
 
@@ -58,12 +57,7 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset(
-                  'assets/Mjifarms.jpg',
-                  width: 500,
-                  height: 500,
-                ),
-
+                Image.asset('assets/Mjifarms.jpg', width: 500, height: 500),
               ],
             ),
           ),

@@ -1,11 +1,11 @@
 // main_screen.dart
 import 'package:flutter/material.dart';
-import 'package:mjifarm/plantdetails.dart';
+import 'package:mjifarm/experts.dart';
 import 'home_dashboard.dart';
 import 'reminder.dart';
 import 'plants.dart';
 import 'blog.dart';
-//import 'profile.dart';
+import 'fprofile.dart';
 
 class MainScreen extends StatefulWidget {
   @override
@@ -20,7 +20,8 @@ class _MainScreenState extends State<MainScreen> {
     ReminderPage(),
     MyPlantsPage(),
     BlogPage(),
-    //ProfilePage(),
+    FarmerProfilePage(),
+    ContactExpertPage(),
   ];
 
   void _onItemTapped(int index) {
@@ -44,7 +45,7 @@ class _MainScreenState extends State<MainScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: ''),
           BottomNavigationBarItem(icon: Icon(Icons.camera_alt), label: ''),
           BottomNavigationBarItem(icon: Icon(Icons.favorite_border), label: ''),
-          //BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: ''),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: ''),
         ],
       ),
     );
