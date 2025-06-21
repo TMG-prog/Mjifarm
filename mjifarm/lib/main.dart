@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:mjifarm/home.dart';
+import 'package:mjifarm/home_dashboard.dart';
+import 'package:mjifarm/reminder.dart';
 import 'splash.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -19,9 +22,10 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         fontFamily: 'NotoSerif',
         primarySwatch: Colors.green,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: const Splash(),
+      home: Splash(),
       debugShowCheckedModeBanner: false,
     );
   }
