@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'newplant.dart'; // Import this
 import 'plants.dart'; // Optional if routing directly
 import 'weather.dart';
+import 'farmer_features/expert_selection.dart';
+
 class HomeDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -30,12 +32,10 @@ class HomeDashboard extends StatelessWidget {
               // Pending tasks and weather alerts
               Row(
                 children: [
-                  _buildCard('Pending task'),               
-                
-                   //if this card is pressed, navigate to the weather page
-                  
-                  GestureDetector(                                     
-                                
+                  _buildCard('Pending task'),
+
+                  //if this card is pressed, navigate to the weather page
+                  GestureDetector(
                     onTap: () {
                       Navigator.push(
                         context,
@@ -44,9 +44,15 @@ class HomeDashboard extends StatelessWidget {
                     },
                     child: _buildCard('Weather'),
                   ),
-
-
-                 
+                 GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => ExpertSelectionScreen()),
+                      );
+                    },
+                    child: _buildCard('Contact an Expert'),
+                  )
                 ],
               ),
               SizedBox(height: 25),
@@ -103,6 +109,7 @@ class HomeDashboard extends StatelessWidget {
                   Icon(Icons.chevron_right),
                 ],
               ),
+
               SizedBox(height: 10),
               SizedBox(
                 height: 180,
