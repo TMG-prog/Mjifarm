@@ -1,93 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:mjifarm/experts.dart';
-import 'package:mjifarm/pests.dart';
-import 'package:table_calendar/table_calendar.dart';
-import 'newplant.dart';
-import 'plants.dart';
+import 'newplant.dart'; // Import this
+import 'plants.dart'; // Optional if routing directly
 import 'weather.dart';
 
-class Task {
-  String title;
-  String description;
-  bool isDone;
-  DateTime dueDate;
-
-  Task({
-    required this.title,
-    required this.description,
-    required this.isDone,
-    required this.dueDate,
-  });
-}
-
-class HomeDashboard extends StatefulWidget {
-  @override
-  _HomeDashboardState createState() => _HomeDashboardState();
-}
-
-class _HomeDashboardState extends State<HomeDashboard> {
-  final List<Task> tasks = [
-    Task(
-      title: "Buy Seeds",
-      description: "Kales & Spinach",
-      isDone: false,
-      dueDate: DateTime.now().subtract(const Duration(days: 1)),
-    ),
-    Task(
-      title: "Water Crops",
-      description: "Early morning",
-      isDone: false,
-      dueDate: DateTime.now(),
-    ),
-    Task(
-      title: "Check Pests",
-      description: "Inspect for aphids",
-      isDone: true,
-      dueDate: DateTime.now(),
-    ),
-    Task(
-      title: "Harvest Tomatoes",
-      description: "Fully ripened",
-      isDone: false,
-      dueDate: DateTime.now().add(const Duration(days: 1)),
-    ),
-  ];
-
-  Future<String> fetchTipOfTheDay() async {
-    try {
-      final today = DateTime.now();
-      final todayStr = "${today.year}-${today.month}-${today.day}";
-
-      final tipQuery =
-          await FirebaseFirestore.instance
-              .collection("Tips")
-              .where("date", isEqualTo: todayStr)
-              .get();
-
-      if (tipQuery.docs.isNotEmpty) {
-        return tipQuery.docs.first.data()['Tip'];
-      } else {
-        final randomTip =
-            await FirebaseFirestore.instance.collection("Tips").limit(1).get();
-        if (randomTip.docs.isNotEmpty) {
-          return randomTip.docs.first.data()['Tip'];
-        } else {
-          return "No tip available today.";
-        }
-      }
-    } catch (e) {
-      print(" Error fetching tip: $e");
-      return "Could not load tip today.";
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> fetchPlants() async {
-    final querySnapshot =
-        await FirebaseFirestore.instance.collection("plants").get();
-    return querySnapshot.docs.map((doc) => doc.data()).toList();
-  }
-
+class HomeDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
@@ -120,11 +37,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 ),
                 const SizedBox(height: 20),
 
-                // Tasks and Weather
+                // Pending tasks and weather alerts
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildCardWithTasks("Pending Tasks", overdueTasks),
+                    _buildCard('Pending task'),
+
+                    //if this card is pressed, navigate to the weather page
                     GestureDetector(
                       onTap: () {
                         Navigator.push(
@@ -132,11 +50,11 @@ class _HomeDashboardState extends State<HomeDashboard> {
                           MaterialPageRoute(builder: (_) => WeatherPage()),
                         );
                       },
-                      child: _buildCard("Alert weather/\nbreakouts"),
+                      child: _buildCard('Weather'),
                     ),
                   ],
                 ),
-                const SizedBox(height: 25),
+                SizedBox(height: 25),
 
                 // Greeting
                 Text(

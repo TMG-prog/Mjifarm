@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'Login.dart';
-import 'Farmer.dart';
+import 'mainscreen.dart';
 
 class HomeScreen extends StatelessWidget{
   const HomeScreen({super.key});
@@ -66,7 +66,7 @@ class HomeScreen extends StatelessWidget{
 
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const FarmerPage()),
+                    MaterialPageRoute(builder: (_) => MainScreen()),
                   );
             }
             , label: const Text("Join As a Farmer")
