@@ -1,13 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Reminders',
+      theme: ThemeData(primarySwatch: Colors.green),
+      home: const ReminderPage(),
+    );
+  }
+}
+
 class Task {
+  String id;
   String title;
   String description;
   bool isDone;
   DateTime dueDate;
 
   Task({
+    required this.id,
     required this.title,
     required this.description,
     required this.isDone,
@@ -26,164 +46,198 @@ class _ReminderPageState extends State<ReminderPage> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
 
-  List<Task> tasks = [
-    Task(
-      title: "Buy Seeds",
-      description: "Kales & Spinach",
-      isDone: false,
-      dueDate: DateTime.now().subtract(const Duration(days: 1)),
-    ),
-    Task(
-      title: "Water Crops",
-      description: "Early morning",
-      isDone: false,
-      dueDate: DateTime.now(),
-    ),
-    Task(
-      title: "Check Pests",
-      description: "Inspect for aphids",
-      isDone: true,
-      dueDate: DateTime.now(),
-    ),
-    Task(
-      title: "Harvest Tomatoes",
-      description: "Fully ripened",
-      isDone: false,
-      dueDate: DateTime.now().add(const Duration(days: 1)),
-    ),
-  ];
+  final List<Task> _tasks = [];
+
+  void _addOrEditTask({Task? task}) {
+    final _formKey = GlobalKey<FormState>();
+    String title = task?.title ?? '';
+    String description = task?.description ?? '';
+    DateTime dueDate = task?.dueDate ?? _selectedDay ?? DateTime.now();
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text(task == null ? "Add Task" : "Edit Task"),
+            content: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    initialValue: title,
+                    decoration: const InputDecoration(labelText: 'Title'),
+                    validator:
+                        (val) =>
+                            val == null || val.isEmpty ? "Enter title" : null,
+                    onSaved: (val) => title = val!,
+                  ),
+                  TextFormField(
+                    initialValue: description,
+                    decoration: const InputDecoration(labelText: 'Description'),
+                    onSaved: (val) => description = val ?? '',
+                  ),
+                  TextButton(
+                    child: Text("Due: ${dueDate.toLocal()}".split(' ')[0]),
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: dueDate,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2030),
+                      );
+                      if (picked != null) {
+                        setState(() => dueDate = picked);
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel"),
+              ),
+              ElevatedButton(
+                child: Text(task == null ? "Add" : "Update"),
+                onPressed: () {
+                  if (_formKey.currentState!.validate()) {
+                    _formKey.currentState!.save();
+                    setState(() {
+                      if (task == null) {
+                        _tasks.add(
+                          Task(
+                            id:
+                                DateTime.now().millisecondsSinceEpoch
+                                    .toString(),
+                            title: title,
+                            description: description,
+                            isDone: false,
+                            dueDate: dueDate,
+                          ),
+                        );
+                      } else {
+                        task.title = title;
+                        task.description = description;
+                        task.dueDate = dueDate;
+                      }
+                    });
+                    Navigator.pop(context);
+                  }
+                },
+              ),
+            ],
+          ),
+    );
+  }
+
+  void _deleteTask(String id) {
+    setState(() {
+      _tasks.removeWhere((t) => t.id == id);
+    });
+  }
+
+  void _toggleDone(Task task, bool? value) {
+    setState(() {
+      task.isDone = value ?? false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final today = DateTime.now();
     final selectedDay = _selectedDay ?? today;
 
-    final overdueTasks =
-        tasks
-            .where(
-              (task) => task.dueDate.isBefore(today) && !task.isDone,
-            ) // overdue = before today and not done
-            .toList();
-
+    final overdue =
+        _tasks.where((t) => t.dueDate.isBefore(today) && !t.isDone).toList();
+    final pending =
+        _tasks.where((t) => t.dueDate.isAfter(today) && !t.isDone).toList();
     final dayTasks =
-        tasks.where((task) => isSameDay(task.dueDate, selectedDay)).toList();
+        _tasks.where((t) => isSameDay(t.dueDate, selectedDay)).toList();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Reminders"),
-        actions: [
-          IconButton(icon: const Icon(Icons.settings), onPressed: () {}),
-        ],
+      appBar: AppBar(title: const Text("Reminders")),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _addOrEditTask(),
+        child: const Icon(Icons.add),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Calendar
             TableCalendar(
               firstDay: DateTime.utc(2020, 1, 1),
               lastDay: DateTime.utc(2030, 12, 31),
               focusedDay: _focusedDay,
               selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-              onDaySelected: (selectedDay, focusedDay) {
+              onDaySelected: (selected, focused) {
                 setState(() {
-                  _selectedDay = selectedDay;
-                  _focusedDay = focusedDay;
+                  _selectedDay = selected;
+                  _focusedDay = focused;
                 });
               },
-              calendarStyle: const CalendarStyle(
-                todayDecoration: BoxDecoration(
-                  color: Colors.green,
-                  shape: BoxShape.circle,
-                ),
-                selectedDecoration: BoxDecoration(
-                  color: Colors.black,
-                  shape: BoxShape.circle,
-                ),
-              ),
             ),
             const SizedBox(height: 20),
 
-            // Overdue
-            if (overdueTasks.isNotEmpty) ...[
-              const Text(
-                'Overdue Tasks',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              ...overdueTasks.map((task) => overdueTile(task)),
-              const SizedBox(height: 20),
-            ],
+            // Overdue Section
+            const Text(
+              'Overdue Tasks',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            if (overdue.isEmpty) const Text("No overdue tasks."),
+            ...overdue.map(_taskTile),
 
-            // Tasks for Selected Day
+            const SizedBox(height: 20),
+
+            // Pending Section
+            const Text(
+              'Pending Tasks',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            if (pending.isEmpty) const Text("No pending tasks."),
+            ...pending.map(_taskTile),
+
+            const SizedBox(height: 20),
+
+            // Today's or selected day's tasks
             Text(
               isSameDay(selectedDay, today)
                   ? "Today's Tasks"
-                  : "Tasks for ${selectedDay.toLocal().toString().split(' ')[0]}",
+                  : "Tasks for ${selectedDay.toLocal()}".split(' ')[0],
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            if (dayTasks.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 10),
-                child: Text("No tasks scheduled for this day."),
-              ),
-            ...dayTasks.map((task) => taskTile(task)),
+            if (dayTasks.isEmpty) const Text("No tasks for this day."),
+            ...dayTasks.map(_taskTile),
           ],
         ),
       ),
     );
   }
 
-  /// Checkbox task tile
-  Widget taskTile(Task task) {
+  Widget _taskTile(Task task) {
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
       child: ListTile(
         leading: Checkbox(
           value: task.isDone,
-          onChanged: (val) {
-            setState(() {
-              task.isDone = val!;
-            });
-          },
+          onChanged: (val) => _toggleDone(task, val),
         ),
-        title: Text(
-          task.title,
-          style: TextStyle(
-            decoration: task.isDone ? TextDecoration.lineThrough : null,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        title: Text(task.title),
         subtitle: Text(task.description),
-        trailing: Icon(
-          task.isDone ? Icons.check_circle : Icons.radio_button_unchecked,
-          color: task.isDone ? Colors.green : Colors.grey,
-        ),
-      ),
-    );
-  }
-
-  /// Overdue task banner tile
-  Widget overdueTile(Task task) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.red.shade50,
-        border: Border.all(color: Colors.redAccent),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.warning_amber_rounded, color: Colors.red),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              '${task.title} - ${task.description}',
-              style: const TextStyle(fontWeight: FontWeight.w500),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: () => _addOrEditTask(task: task),
             ),
-          ),
-        ],
+            IconButton(
+              icon: const Icon(Icons.delete),
+              onPressed: () => _deleteTask(task.id),
+            ),
+          ],
+        ),
       ),
     );
   }
