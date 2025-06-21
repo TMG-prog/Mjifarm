@@ -4,6 +4,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'newplant.dart';
 import 'plants.dart';
 import 'weather.dart';
+import 'farmer_features/expert_selection.dart';
 
 class HomeDashboard extends StatelessWidget {
   @override
@@ -29,21 +30,33 @@ class HomeDashboard extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // Pending task and weather cards
-            Row(
-              children: [
-                _buildCard('Pending task'),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => WeatherPage()),
-                    );
-                  },
-                  child: _buildCard('Weather'),
-                ),
-              ],
-            ),
+              // Pending tasks and weather alerts
+              Row(
+                children: [
+                  _buildCard('Pending task'),
+
+                  //if this card is pressed, navigate to the weather page
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => WeatherPage()),
+                      );
+                    },
+                    child: _buildCard('Weather'),
+                  ),
+                 GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => ExpertSelectionScreen()),
+                      );
+                    },
+                    child: _buildCard('Contact an Expert'),
+                  )
+                ],
+              ),
+              SizedBox(height: 25),
 
             const SizedBox(height: 25),
             const Text(
@@ -111,37 +124,38 @@ class HomeDashboard extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 25),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: const [
-                Text(
-                  'Trending practices',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                Icon(Icons.chevron_right),
-              ],
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              height: 180,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildTrendingCard(
-                    'assets/sample1.jpg',
-                    'Compost Tips',
-                    'Best composting for urban farms',
+                  Text(
+                    'Trending practices',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
-                  _buildTrendingCard(
-                    'assets/sample2.jpg',
-                    'Irrigation Hacks',
-                    'Low-budget watering system',
-                  ),
+                  Icon(Icons.chevron_right),
                 ],
               ),
-            ),
-          ],
+
+              SizedBox(height: 10),
+              SizedBox(
+                height: 180,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    _buildTrendingCard(
+                      'assets/sample1.jpg',
+                      'Compost Tips',
+                      'Best composting for urban farms',
+                    ),
+                    _buildTrendingCard(
+                      'assets/sample2.jpg',
+                      'Irrigation Hacks',
+                      'Low-budget watering system',
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
