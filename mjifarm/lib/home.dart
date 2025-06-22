@@ -2,7 +2,7 @@ import 'package:firebase_ui_auth/firebase_ui_auth.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:mjifarm/fprofile.dart';
+import 'package:mjifarm/profile.dart';
 import 'package:mjifarm/mainscreen.dart';
 import 'Login.dart';
 import 'home_dashboard.dart';

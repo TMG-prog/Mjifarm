@@ -1,20 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart'; // NEW: Import Firebase Storage
-import 'package:image_picker/image_picker.dart'; // NEW: Import Image Picker
-import 'dart:io'; // NEW: For File operations
-
-import 'message_bubble.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+ 
+import 'message_bubble.dart'; // Adjust this import path as needed
 
 class ChatScreen extends StatefulWidget {
   final String chatRoomId;
-  final String chatTitle; 
+  final String chatTitle;
+  final String farmerUid; 
+  final String expertUid; 
 
   const ChatScreen({
     super.key,
     required this.chatRoomId,
     required this.chatTitle,
+    required this.farmerUid, 
+    required this.expertUid, 
   });
 
   @override
@@ -39,7 +43,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _initializeChat() async {
     if (_currentUser == null) {
-      print("User not logged in. Cannot initialize chat.");
+      print("ChatScreen Debug: User not logged in. Cannot initialize chat."); // Added Debug prefix
       setState(() {
         _isLoadingMessages = false;
       });
@@ -53,10 +57,57 @@ class _ChatScreenState extends State<ChatScreen> {
         setState(() {
           _currentUserName = userSnapshot.value as String;
         });
+        print("ChatScreen Debug: Current user name fetched: $_currentUserName"); // Added Debug prefix
+      } else {
+        print("ChatScreen Debug: Current user name not found in DB for ${_currentUser!.uid}."); // Added Debug prefix
       }
     } catch (e) {
-      print("Error fetching user name: $e");
+      print("ChatScreen Debug: Error fetching user name for ${_currentUser!.uid}: $e"); // Added Debug prefix
     }
+
+    String currentUid = _currentUser!.uid;
+    String otherUid = (currentUid == widget.farmerUid) ? widget.expertUid : widget.farmerUid;
+
+    print("ChatScreen Debug: Current UID (Initiator): $currentUid"); // Added Debug prefix
+    print("ChatScreen Debug: Other UID (Receiver): $otherUid"); // Added Debug prefix
+    print("ChatScreen Debug: Chat Room ID: ${widget.chatRoomId}"); // Added Debug prefix
+    print("ChatScreen Debug: Farmer UID (passed to ChatScreen): ${widget.farmerUid}"); // Added Debug prefix
+    print("ChatScreen Debug: Expert UID (passed to ChatScreen): ${widget.expertUid}"); // Added Debug prefix
+
+
+    DatabaseReference currentUserChatRef = FirebaseDatabase.instance.ref('users/$currentUid/chats/${widget.chatRoomId}');
+    DatabaseReference otherUserChatRef = FirebaseDatabase.instance.ref('users/$otherUid/chats/${widget.chatRoomId}');
+
+    // --- CRUCIAL CHANGE HERE: ADD .then() and .catchError() blocks ---
+    currentUserChatRef.get().then((snapshot) {
+      if (!snapshot.exists) {
+        currentUserChatRef.set(true).then((_) {
+          print("ChatScreen Debug: SUCCESS: Chat room ID added to current user ($currentUid) chats."); // Added success print
+        }).catchError((e) {
+          print("ChatScreen Debug: ERROR adding chat room ID to current user ($currentUid) chats: $e"); // Added error print
+        });
+      } else {
+        print("ChatScreen Debug: Chat room ID already exists for current user ($currentUid).");
+      }
+    }).catchError((e) {
+      print("ChatScreen Debug: ERROR checking current user chat ref for $currentUid: $e"); // Added error print
+    });
+
+    otherUserChatRef.get().then((snapshot) {
+      if (!snapshot.exists) {
+        otherUserChatRef.set(true).then((_) {
+          print("ChatScreen Debug: SUCCESS: Chat room ID added to other user ($otherUid) chats."); // Added success print
+        }).catchError((e) {
+          print("ChatScreen Debug: ERROR adding chat room ID to other user ($otherUid) chats: $e"); // Added error print
+        });
+      } else {
+        print("ChatScreen Debug: Chat room ID already exists for other user ($otherUid).");
+      }
+    }).catchError((e) {
+      print("ChatScreen Debug: ERROR checking other user chat ref for $otherUid: $e"); // Added error print
+    });
+    // --- END OF CRUCIAL CHANGE ---
+
 
     // Set up listener for messages in the specific chat room
     _messagesRef.child(widget.chatRoomId).child('messages').orderByChild('timestamp').onValue.listen((event) {
@@ -81,7 +132,7 @@ class _ChatScreenState extends State<ChatScreen> {
         });
       }
     }, onError: (error) {
-      print("Error listening to messages: $error");
+      print("ChatScreen Debug: Error listening to messages: $error"); // Added Debug prefix
       setState(() {
         _isLoadingMessages = false;
       });
@@ -106,7 +157,7 @@ class _ChatScreenState extends State<ChatScreen> {
         'type': 'text', // Explicitly 'text' type for text messages
       });
     } catch (e) {
-      print("Error sending message: $e");
+      print("ChatScreen Debug: Error sending message: $e"); // Added Debug prefix
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to send message: $e'), backgroundColor: Colors.red),
       );
@@ -125,7 +176,7 @@ class _ChatScreenState extends State<ChatScreen> {
         'type': 'image', // Explicitly 'image' type for image messages
       });
     } catch (e) {
-      print("Error sending image message: $e");
+      print("ChatScreen Debug: Error sending image message: $e"); // Added Debug prefix
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to send image: $e'), backgroundColor: Colors.red),
       );
@@ -141,7 +192,7 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     final picker = ImagePicker();
-    final XFile? pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70); // Pick image from gallery
+    final XFile? pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
 
     if (pickedFile != null) {
       try {
@@ -149,29 +200,25 @@ class _ChatScreenState extends State<ChatScreen> {
           const SnackBar(content: Text('Uploading image...')),
         );
 
-        // Create a unique file name for Firebase Storage
         String fileName = 'chat_images/${widget.chatRoomId}/${_currentUser!.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
         Reference storageRef = FirebaseStorage.instance.ref().child(fileName);
 
-        // Upload the file to Firebase Storage
         UploadTask uploadTask = storageRef.putFile(File(pickedFile.path));
         TaskSnapshot snapshot = await uploadTask;
         String downloadUrl = await snapshot.ref.getDownloadURL();
 
-        // Once uploaded, send the message with the image URL
         await _sendImageMessage(downloadUrl);
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Image sent!')),
         );
       } catch (e) {
-        print("Error uploading image: $e");
+        print("ChatScreen Debug: Error uploading image: $e"); // Added Debug prefix
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to upload image: $e'), backgroundColor: Colors.red),
         );
       }
     } else {
-      // User cancelled image picking
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Image selection cancelled.')),
       );
@@ -198,8 +245,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         ),
                       )
                     : ListView.builder(
-                        // Display messages in chronological order, scroll to bottom
-                        reverse: false, 
+                        reverse: false,
                         padding: const EdgeInsets.all(8.0),
                         itemCount: _messages.length,
                         itemBuilder: (context, index) {
@@ -207,8 +253,8 @@ class _ChatScreenState extends State<ChatScreen> {
                           final bool isMe = message['senderId'] == _currentUser?.uid;
                           return MessageBubble(
                             sender: message['senderName'] ?? 'Unknown',
-                            text: message['text'] ?? '', // Will be empty for image messages
-                            imageUrl: message['imageUrl'], // Pass imageUrl
+                            text: message['text'] ?? '',
+                            imageUrl: message['imageUrl'],
                             isMe: isMe,
                             timestamp: message['timestamp'] ?? 0,
                           );
@@ -220,7 +266,7 @@ class _ChatScreenState extends State<ChatScreen> {
             child: Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.image, color: Colors.green), // Changed icon for gallery
+                  icon: const Icon(Icons.image, color: Colors.green),
                   onPressed: _uploadImage,
                   tooltip: 'Upload Image',
                 ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // If you need current user info
-import 'package:firebase_database/firebase_database.dart'; // To fetch diagnoses
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
+import "../expert_features/expert_chat_list.dart"; // Import the chat list screen
 
 class ExpertDashboardScreen extends StatefulWidget {
   const ExpertDashboardScreen({super.key});
@@ -13,7 +14,9 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
   User? _currentUser;
   int _pendingDiagnosesCount = 0;
   bool _isLoading = true;
-  final DatabaseReference _cropLogsRef = FirebaseDatabase.instance.ref('crop_logs');
+  final DatabaseReference _cropLogsRef = FirebaseDatabase.instance.ref(
+    'crop_logs',
+  );
 
   @override
   void initState() {
@@ -23,12 +26,15 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
   }
 
   Future<void> _fetchPendingDiagnosesCount() async {
-    setState(() { _isLoading = true; });
+    setState(() {
+      _isLoading = true;
+    });
     int count = 0;
     try {
       DataSnapshot cropLogsSnapshot = await _cropLogsRef.get();
       if (cropLogsSnapshot.exists && cropLogsSnapshot.value is Map) {
-        Map<dynamic, dynamic> cropLogsMap = cropLogsSnapshot.value as Map<dynamic, dynamic>;
+        Map<dynamic, dynamic> cropLogsMap =
+            cropLogsSnapshot.value as Map<dynamic, dynamic>;
         cropLogsMap.forEach((cropLogId, cropLogValue) {
           if (cropLogValue is Map && cropLogValue['diagnoses'] is Map) {
             Map<dynamic, dynamic> diagnosesMap = cropLogValue['diagnoses'];
@@ -54,9 +60,9 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return  Scaffold(
-        appBar: AppBar(title: Text('Expert Dashboard')),
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        appBar: AppBar(title: const Text('Expert Dashboard')),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -107,7 +113,22 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
                 Navigator.pop(context);
                 // TODO: Navigate to PendingDiagnosesScreen
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Navigating to Pending Diagnoses...')),
+                  const SnackBar(
+                    content: Text('Navigating to Pending Diagnoses...'),
+                  ),
+                );
+              },
+            ),
+            // NEW: Chat List Tile in Drawer
+            ListTile(
+              leading: const Icon(Icons.chat),
+              title: const Text('My Chats'),
+              onTap: () {
+                Navigator.pop(context); // Close the drawer
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const ExpertChatListScreen(),
+                  ),
                 );
               },
             ),
@@ -144,13 +165,16 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
             Text(
               'Expert Overview',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green.shade800,
-                  ),
+                fontWeight: FontWeight.bold,
+                color: Colors.green.shade800,
+              ),
             ),
             const SizedBox(height: 24),
             GridView.count(
-              crossAxisCount: MediaQuery.of(context).size.width > 900 ? 3 : (MediaQuery.of(context).size.width > 600 ? 2 : 1),
+              crossAxisCount:
+                  MediaQuery.of(context).size.width > 900
+                      ? 3
+                      : (MediaQuery.of(context).size.width > 600 ? 2 : 1),
               crossAxisSpacing: 24,
               mainAxisSpacing: 24,
               shrinkWrap: true,
@@ -164,6 +188,21 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
                   Colors.orange,
                   () {
                     // TODO: Navigate to PendingDiagnosesScreen
+                  },
+                ),
+                // NEW: Chat Card
+                _buildExpertCard(
+                  context,
+                  'My Chats',
+                  'Active conversations', // You could fetch actual unread count if desired
+                  Icons.chat,
+                  Colors.purple, // Choose a suitable color
+                  () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const ExpertChatListScreen(),
+                      ),
+                    );
                   },
                 ),
                 _buildExpertCard(
@@ -191,7 +230,9 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
             const SizedBox(height: 32),
             Text(
               'Welcome to your expert dashboard. Here you can find an overview of new plant diagnosis requests and access your consultation tools.',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey.shade700),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(color: Colors.grey.shade700),
             ),
           ],
         ),
@@ -199,7 +240,14 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
     );
   }
 
-  Widget _buildExpertCard(BuildContext context, String title, String value, IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildExpertCard(
+    BuildContext context,
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -219,16 +267,12 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
             children: [
               Icon(icon, size: 48, color: color),
               const SizedBox(height: 8),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
+              Text(title, style: Theme.of(context).textTheme.titleSmall),
               Text(
                 value,
-                style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.bold),
               ),
             ],
           ),

@@ -157,8 +157,8 @@ class HomeDashboard extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
+      );
+    
   }
 
   Widget _buildCard(String title) {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../chat/chat_screen.dart'; 
+import '../chat/chat_screen.dart'; // Adjust import path as needed
 
 class ExpertSelectionScreen extends StatefulWidget {
   const ExpertSelectionScreen({super.key});
@@ -123,6 +123,9 @@ class _ExpertSelectionScreenState extends State<ExpertSelectionScreen> {
                                     builder: (context) => ChatScreen(
                                       chatRoomId: chatRoomId,
                                       chatTitle: 'Chat with ${expert['name']}',
+                                      // FIX: Pass farmerUid and expertUid explicitly
+                                      farmerUid: _currentFarmerUser!.uid, // The current logged-in user is the farmer
+                                      expertUid: expert['id'],             // The selected expert's UID
                                     ),
                                   ),
                                 );
