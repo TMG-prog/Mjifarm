@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
+import 'dart:convert'; // Import for base64Decode
 
 class PlantDetailsPage extends StatelessWidget {
   final String name;
-  final String imagePath;
+  final String imagePath; // Can be asset path or base64 data URI
   final String growthStatus;
   final int growthPercentage;
   final String harvestDate;
+  final String? gardenName; // New field
+  final String? container; // New field
+  final String? category; // New field
+  final String? plantingDate; // New field
 
   const PlantDetailsPage({
     super.key,
@@ -14,6 +19,10 @@ class PlantDetailsPage extends StatelessWidget {
     required this.growthStatus,
     required this.growthPercentage,
     required this.harvestDate,
+    this.gardenName, // Make these nullable as they might not always be present or needed for all calls
+    this.container,
+    this.category,
+    this.plantingDate,
   });
 
   @override
@@ -24,16 +33,16 @@ class PlantDetailsPage extends StatelessWidget {
         child: Column(
           children: [
             _buildHeader(context),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Text(
-              'Harvest on $harvestDate',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              'Harvest on ${harvestDate.split('T')[0]}', // Display only date part
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             _buildStatsGrid(),
-            SizedBox(height: 30),
+            const SizedBox(height: 30),
             _buildProgressPlaceholder(),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
           ],
         ),
       ),
@@ -41,6 +50,16 @@ class PlantDetailsPage extends StatelessWidget {
   }
 
   Widget _buildHeader(BuildContext context) {
+    ImageProvider imageProvider;
+    if (imagePath.startsWith('data:image')) {
+      // Decode base64 image data
+      final String base64String = imagePath.split(',').last;
+      imageProvider = MemoryImage(base64Decode(base64String));
+    } else {
+      // Assume it's an asset path
+      imageProvider = AssetImage(imagePath);
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
       decoration: const BoxDecoration(
@@ -53,8 +72,10 @@ class PlantDetailsPage extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Align(alignment: Alignment.topLeft, child: BackButton()),
-          CircleAvatar(radius: 50, backgroundImage: AssetImage(imagePath)),
+          Align(alignment: Alignment.topLeft, child: BackButton(
+            onPressed: () => Navigator.pop(context), // Ensure back button works
+          )),
+          CircleAvatar(radius: 50, backgroundImage: imageProvider), // Use dynamic imageProvider
           const SizedBox(height: 8),
           Text(
             name,
@@ -75,21 +96,38 @@ class PlantDetailsPage extends StatelessWidget {
   }
 
   Widget _buildStatsGrid() {
+    // Collect all info cards dynamically
+    List<Widget> infoCards = [
+      _buildInfoCard(Icons.thermostat, '25%', 'Temperature'),
+      _buildInfoCard(Icons.water_drop, 'Abundant', 'Water'),
+      _buildInfoCard(Icons.wb_sunny, 'High', 'Sun Light'),
+      _buildInfoCard(Icons.grass, 'Medium', 'Soil'),
+    ];
+
+    if (gardenName != null && gardenName!.isNotEmpty) {
+      infoCards.add(_buildInfoCard(Icons.location_on, gardenName!, 'Garden'));
+    }
+    if (category != null && category!.isNotEmpty) {
+      infoCards.add(_buildInfoCard(Icons.local_florist, category!, 'Category'));
+    }
+    if (container != null && container!.isNotEmpty) {
+      infoCards.add(_buildInfoCard(Icons.inventory_2, container!, 'Container'));
+    }
+    if (plantingDate != null && plantingDate!.isNotEmpty) {
+      infoCards.add(_buildInfoCard(Icons.calendar_today, plantingDate!.split('T')[0], 'Planting Date'));
+    }
+
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 15),
       child: GridView.count(
         shrinkWrap: true,
         crossAxisCount: 2,
-        physics: NeverScrollableScrollPhysics(),
+        physics: const NeverScrollableScrollPhysics(), // Use const for better performance
         childAspectRatio: 3 / 2,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
-        children: [
-          _buildInfoCard(Icons.thermostat, '25%', 'Temperature'),
-          _buildInfoCard(Icons.water_drop, 'Abundant', 'Water'),
-          _buildInfoCard(Icons.wb_sunny, 'High', 'Sun Light'),
-          _buildInfoCard(Icons.grass, 'Medium', 'Soil'),
-        ],
+        children: infoCards, // Use the dynamically built list
       ),
     );
   }

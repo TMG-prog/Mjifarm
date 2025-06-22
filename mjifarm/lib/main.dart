@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mjifarm/home.dart';
 import 'package:mjifarm/home_dashboard.dart';
+import 'package:mjifarm/newplant.dart';
 import 'package:mjifarm/reminder.dart';
 import 'splash.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -27,6 +28,10 @@ class MyApp extends StatelessWidget {
       ),
       home: Splash(),
       debugShowCheckedModeBanner: false,
+      routes: {
+       '/newplant':(context) => NewPlantPage(),
+        '/reminder': (context) => ReminderPage(),
+      },
     );
   }
 }
