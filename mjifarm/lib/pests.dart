@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart'; // Import flutter_map
+import 'package:latlong2/latlong.dart';
 
 class PestAlert {
   final String type;
@@ -8,6 +10,7 @@ class PestAlert {
   final String timeAgo;
   final IconData icon;
   final Color color;
+  final LatLng coordinates; 
 
   PestAlert({
     required this.type,
@@ -17,10 +20,12 @@ class PestAlert {
     required this.timeAgo,
     required this.icon,
     required this.color,
+    required this.coordinates, 
   });
 }
 
 class PestAlertsPage extends StatelessWidget {
+
   final List<PestAlert> alerts = [
     PestAlert(
       type: "GARDEN PEST",
@@ -30,6 +35,7 @@ class PestAlertsPage extends StatelessWidget {
       timeAgo: "2 hours ago",
       icon: Icons.bug_report,
       color: Colors.orange,
+      coordinates: LatLng(-1.3039, 36.7822), // Example: Near Kibera, Nairobi
     ),
     PestAlert(
       type: "STRUCTURAL PEST",
@@ -39,6 +45,7 @@ class PestAlertsPage extends StatelessWidget {
       timeAgo: "5 hours ago",
       icon: Icons.warning,
       color: Colors.redAccent,
+      coordinates: LatLng(-1.2676, 36.8049), // Example: Westlands, Nairobi
     ),
     PestAlert(
       type: "VECTOR CONTROL",
@@ -48,6 +55,7 @@ class PestAlertsPage extends StatelessWidget {
       timeAgo: "1 day ago",
       icon: Icons.bug_report_outlined,
       color: Colors.green,
+      coordinates: LatLng(-1.2384, 36.9205), // Example: Kasarani, Nairobi
     ),
   ];
 
@@ -60,7 +68,7 @@ class PestAlertsPage extends StatelessWidget {
       ),
       body: Column(
         children: [
-          _buildMapSection(),
+          _buildMapSection(), // This will now render the map
           const SizedBox(height: 10),
           Expanded(
             child: ListView.builder(
@@ -77,30 +85,62 @@ class PestAlertsPage extends StatelessWidget {
   }
 
   Widget _buildMapSection() {
+  
+    double avgLat =
+        alerts.map((a) => a.coordinates.latitude).reduce((a, b) => a + b) /
+        alerts.length;
+    double avgLng =
+        alerts.map((a) => a.coordinates.longitude).reduce((a, b) => a + b) /
+        alerts.length;
+    LatLng initialCenter = LatLng(avgLat, avgLng);
+
+   
+
     return Container(
       margin: const EdgeInsets.all(12),
-      height: 180,
+      height: 250, // Increased height for better map view
       decoration: BoxDecoration(
-        color: Colors.grey[300],
         borderRadius: BorderRadius.circular(15),
-        image: const DecorationImage(
-          image: AssetImage(
-            'assets/map_placeholder.png',
-          ), // Replace with real map or static
-          fit: BoxFit.cover,
-        ),
+        border: Border.all(
+          color: Colors.grey.shade300,
+          width: 1,
+        ), // Optional: add border
       ),
-      alignment: Alignment.topRight,
-      padding: const EdgeInsets.all(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.9),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Text(
-          "Live",
-          style: TextStyle(fontWeight: FontWeight.bold),
+      child: ClipRRect(
+        // Clip to apply borderRadius
+        borderRadius: BorderRadius.circular(15),
+        child: FlutterMap(
+          options: MapOptions(
+            initialCenter: initialCenter,
+            initialZoom:
+                10.0, 
+            minZoom: 2.0,
+            maxZoom: 18.0,
+          ),
+          children: [
+            TileLayer(
+              
+              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+             
+              userAgentPackageName:
+                  'com.mjifarms.app', 
+            ),
+            MarkerLayer(
+              markers:
+                  alerts.map((alert) {
+                    return Marker(
+                      width: 40.0,
+                      height: 40.0,
+                      point: alert.coordinates,
+                      child: Tooltip(
+                        // Optional: show text on long press/hover
+                        message: alert.title,
+                        child: Icon(alert.icon, color: alert.color, size: 30.0),
+                      ),
+                    );
+                  }).toList(),
+            ),
+          ],
         ),
       ),
     );
