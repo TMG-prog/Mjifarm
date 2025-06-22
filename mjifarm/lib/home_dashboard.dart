@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import 'package:mjifarm/pests.dart';
 
-import 'article.dart';
-import 'newplant.dart';
-import 'plants.dart';
-import 'weather.dart';
-import 'farmer_features/expert_selection.dart';
+import 'package:mjifarm/weather.dart' show getTodayWeatherSummary, WeatherData;
+import 'package:mjifarm/reminder.dart';
+import 'package:mjifarm/pests.dart';
+import 'package:mjifarm/plants.dart';
+import 'package:mjifarm/newplant.dart';
+import 'package:mjifarm/article.dart';
+import 'package:mjifarm/weather.dart';
+import 'package:mjifarm/farmer_features/expert_selection.dart';
 
 class HomeDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String todayDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final WeatherData weatherSummary = getTodayWeatherSummary();
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -20,7 +24,7 @@ class HomeDashboard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Search bar
+            //  Search bar
             TextField(
               decoration: InputDecoration(
                 hintText: 'Search',
@@ -35,21 +39,136 @@ class HomeDashboard extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // Cards
+            //  Tasks and Weather cards
             Row(
               children: [
-                _buildCard('Pending task'),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => WeatherPage()),
-                    );
-                  },
-                  child: _buildCard('Weather'),
+                // Today’s Tasks Card
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => ReminderPage()),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: const Color(0xffb0e8b2),
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Today's Tasks",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          FutureBuilder<DatabaseEvent>(
+                            future:
+                                FirebaseDatabase.instance
+                                    .ref(
+                                      'tasks/${FirebaseAuth.instance.currentUser?.uid}',
+                                    )
+                                    .once(),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(),
+                                );
+                              }
+                              if (!snapshot.hasData ||
+                                  snapshot.data?.snapshot.value == null) {
+                                return const Text("No tasks today.");
+                              }
+
+                              final data = Map<String, dynamic>.from(
+                                snapshot.data!.snapshot.value as Map,
+                              );
+
+                              final today = DateTime.now();
+                              final todayTasks =
+                                  data.values
+                                      .map((e) => Map<String, dynamic>.from(e))
+                                      .where((task) {
+                                        final due = DateTime.tryParse(
+                                          task['dueDate'] ?? '',
+                                        );
+                                        return due != null &&
+                                            due.year == today.year &&
+                                            due.month == today.month &&
+                                            due.day == today.day;
+                                      })
+                                      .take(2)
+                                      .toList();
+
+                              if (todayTasks.isEmpty) {
+                                return const Text("No tasks today.");
+                              }
+
+                              return Wrap(
+                                spacing: 8,
+                                children:
+                                    todayTasks.map((task) {
+                                      return Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                          border: Border.all(
+                                            color: Colors.green.shade700,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          task['title'] ?? '',
+                                          style: TextStyle(
+                                            color: Colors.green.shade800,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                // Weather Card
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => WeatherPage()),
+                      );
+                    },
+                    child: _buildCard(
+                      'Weather',
+                      subtitle:
+                          '${weatherSummary.temperature}, ${weatherSummary.condition}',
+                    ),
+                  ),
                 ),
               ],
             ),
+
             const SizedBox(height: 25),
 
             const Text(
@@ -58,7 +177,7 @@ class HomeDashboard extends StatelessWidget {
             ),
             const SizedBox(height: 5),
 
-            // Tip of the Day
+            // 🌞 Tip of the Day
             FutureBuilder<DatabaseEvent>(
               future: FirebaseDatabase.instance.ref('tips/$todayDate').once(),
               builder: (context, snapshot) {
@@ -67,7 +186,8 @@ class HomeDashboard extends StatelessWidget {
                     "Loading tip...",
                     style: TextStyle(color: Colors.black54),
                   );
-                } else if (snapshot.hasError) {
+                }
+                if (snapshot.hasError) {
                   return const Text(
                     "Error loading tip",
                     style: TextStyle(color: Colors.red),
@@ -75,73 +195,20 @@ class HomeDashboard extends StatelessWidget {
                 }
 
                 final tip = snapshot.data?.snapshot.value?.toString();
-
                 if (tip == null || tip.isEmpty) {
-                  return Container(
-                    padding: const EdgeInsets.all(12),
-                    margin: const EdgeInsets.symmetric(vertical: 10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF3E0),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      children: const [
-                        Icon(Icons.info_outline, color: Colors.deepOrange),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            "No tip available for today.",
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.deepOrange,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                  return _buildTipBox(
+                    "No tip available for today.",
+                    isEmpty: true,
                   );
                 }
 
-                return Container(
-                  padding: const EdgeInsets.all(12),
-                  margin: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    color: const Color.fromARGB(255, 15, 37, 17),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black12,
-                        blurRadius: 4,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Icons.tips_and_updates,
-                        color: Color(0xFF2E7D32),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          tip,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            color: Color.fromARGB(255, 233, 247, 233),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
+                return _buildTipBox(tip);
               },
             ),
 
             const SizedBox(height: 20),
 
+            //  In the Farm Section
             GestureDetector(
               onTap: () {
                 Navigator.push(
@@ -174,6 +241,7 @@ class HomeDashboard extends StatelessWidget {
 
             const SizedBox(height: 25),
 
+            //  Trending Articles
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: const [
@@ -233,10 +301,7 @@ class HomeDashboard extends StatelessWidget {
 
             const SizedBox(height: 30),
 
-            // 📞 Contact Expert Button at Bottom
-            const SizedBox(height: 30),
-
-            // 📞 Contact Expert + Pest Alerts Buttons at Bottom
+            //  Contact Expert +  Pest Alerts
             Row(
               children: [
                 Expanded(
@@ -287,8 +352,6 @@ class HomeDashboard extends StatelessWidget {
                       ),
                     ),
                     onPressed: () {
-                      //alerts navigation
-
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => PestAlertsPage()),
@@ -304,19 +367,34 @@ class HomeDashboard extends StatelessWidget {
     );
   }
 
-  static Widget _buildCard(String title) {
+  //  Card Widget with optional subtitle
+  static Widget _buildCard(String title, {String? subtitle}) {
     return Container(
-      width: 160,
-      margin: const EdgeInsets.only(right: 10),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
+      height: 120,
       decoration: BoxDecoration(
         color: const Color(0xffb0e8b2),
         borderRadius: BorderRadius.circular(15),
       ),
-      child: Center(child: Text(title, textAlign: TextAlign.center)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          const SizedBox(height: 8),
+          if (subtitle != null)
+            Text(
+              subtitle,
+              style: const TextStyle(fontSize: 14, color: Colors.black87),
+            ),
+        ],
+      ),
     );
   }
 
+  //  Circular farm action (add/view)
   static Widget _buildFarmCircle(
     BuildContext context, {
     IconData? icon,
@@ -342,10 +420,10 @@ class HomeDashboard extends StatelessWidget {
               child:
                   icon != null
                       ? Icon(icon, size: 30, color: Colors.black)
-                      : image != null && image.isNotEmpty
+                      : image != null
                       ? ClipOval(
                         child: Image.asset(
-                          image,
+                          image!,
                           fit: BoxFit.cover,
                           height: 60,
                           width: 60,
@@ -361,6 +439,7 @@ class HomeDashboard extends StatelessWidget {
     );
   }
 
+  //  Trending Article Card
   static Widget _buildTrendingCardFromArticle(
     BuildContext context,
     Map<String, dynamic> article,
@@ -412,6 +491,54 @@ class HomeDashboard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  //  Tip box
+  Widget _buildTipBox(String tip, {bool isEmpty = false}) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        color:
+            isEmpty
+                ? const Color(0xFFFFF3E0)
+                : const Color.fromARGB(255, 15, 37, 17),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow:
+            isEmpty
+                ? []
+                : [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            isEmpty ? Icons.info_outline : Icons.tips_and_updates,
+            color: isEmpty ? Colors.deepOrange : const Color(0xFF2E7D32),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              tip,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color:
+                    isEmpty
+                        ? Colors.deepOrange
+                        : const Color.fromARGB(255, 233, 247, 233),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

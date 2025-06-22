@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'dart:math';
 
 void main() {
   runApp(const MyApp());
@@ -23,16 +26,30 @@ class Task {
   String id;
   String title;
   String description;
-  bool isDone;
   DateTime dueDate;
 
   Task({
     required this.id,
     required this.title,
     required this.description,
-    required this.isDone,
     required this.dueDate,
   });
+
+  // Convert a Task object to Map for Firebase
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'title': title,
+    'description': description,
+    'dueDate': dueDate.toIso8601String(),
+  };
+
+  // Create Task from Firebase snapshot
+  factory Task.fromMap(Map data) => Task(
+    id: data['id'],
+    title: data['title'],
+    description: data['description'],
+    dueDate: DateTime.parse(data['dueDate']),
+  );
 }
 
 class ReminderPage extends StatefulWidget {
@@ -43,11 +60,37 @@ class ReminderPage extends StatefulWidget {
 }
 
 class _ReminderPageState extends State<ReminderPage> {
+  final user = FirebaseAuth.instance.currentUser;
+  final DatabaseReference _dbRef = FirebaseDatabase.instance.ref();
+
+  List<Task> _tasks = [];
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
 
-  final List<Task> _tasks = [];
+  @override
+  void initState() {
+    super.initState();
+    _loadTasks();
+  }
 
+  // Load tasks for current user from Firebase
+  void _loadTasks() async {
+    final uid = user?.uid;
+    if (uid == null) return;
+
+    final snapshot = await _dbRef.child('tasks/$uid').get();
+    if (snapshot.exists) {
+      final data = Map<String, dynamic>.from(snapshot.value as Map);
+      setState(() {
+        _tasks =
+            data.entries
+                .map((e) => Task.fromMap(Map<String, dynamic>.from(e.value)))
+                .toList();
+      });
+    }
+  }
+
+  // Add or update a task in Firebase
   void _addOrEditTask({Task? task}) {
     final _formKey = GlobalKey<FormState>();
     String title = task?.title ?? '';
@@ -104,23 +147,24 @@ class _ReminderPageState extends State<ReminderPage> {
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
                     _formKey.currentState!.save();
+                    final newTask = Task(
+                      id: task?.id ?? Random().nextInt(1000000).toString(),
+                      title: title,
+                      description: description,
+                      dueDate: dueDate,
+                    );
+                    final uid = user?.uid;
+                    if (uid != null) {
+                      _dbRef
+                          .child('tasks/$uid/${newTask.id}')
+                          .set(newTask.toMap());
+                    }
                     setState(() {
                       if (task == null) {
-                        _tasks.add(
-                          Task(
-                            id:
-                                DateTime.now().millisecondsSinceEpoch
-                                    .toString(),
-                            title: title,
-                            description: description,
-                            isDone: false,
-                            dueDate: dueDate,
-                          ),
-                        );
+                        _tasks.add(newTask);
                       } else {
-                        task.title = title;
-                        task.description = description;
-                        task.dueDate = dueDate;
+                        final index = _tasks.indexWhere((t) => t.id == task.id);
+                        _tasks[index] = newTask;
                       }
                     });
                     Navigator.pop(context);
@@ -132,16 +176,22 @@ class _ReminderPageState extends State<ReminderPage> {
     );
   }
 
-  void _deleteTask(String id) {
+  // Delete task from Firebase
+  void _deleteTask(Task task) {
+    final uid = user?.uid;
+    if (uid != null) {
+      _dbRef.child('tasks/$uid/${task.id}').remove();
+    }
     setState(() {
-      _tasks.removeWhere((t) => t.id == id);
+      _tasks.removeWhere((t) => t.id == task.id);
     });
   }
 
+  // Handle checkbox toggle (delete if checked)
   void _toggleDone(Task task, bool? value) {
-    setState(() {
-      task.isDone = value ?? false;
-    });
+    if (value == true) {
+      _deleteTask(task);
+    }
   }
 
   @override
@@ -149,10 +199,16 @@ class _ReminderPageState extends State<ReminderPage> {
     final today = DateTime.now();
     final selectedDay = _selectedDay ?? today;
 
+    // Sort tasks into categories
     final overdue =
-        _tasks.where((t) => t.dueDate.isBefore(today) && !t.isDone).toList();
-    final pending =
-        _tasks.where((t) => t.dueDate.isAfter(today) && !t.isDone).toList();
+        _tasks
+            .where(
+              (t) =>
+                  isSameDay(t.dueDate, today) == false &&
+                  t.dueDate.isBefore(today),
+            )
+            .toList();
+    final pending = _tasks.where((t) => t.dueDate.isAfter(today)).toList();
     final dayTasks =
         _tasks.where((t) => isSameDay(t.dueDate, selectedDay)).toList();
 
@@ -181,17 +237,17 @@ class _ReminderPageState extends State<ReminderPage> {
             ),
             const SizedBox(height: 20),
 
-            // Overdue Section
+            // Overdue Tasks Section
             const Text(
               'Overdue Tasks',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             if (overdue.isEmpty) const Text("No overdue tasks."),
-            ...overdue.map(_taskTile),
+            ...overdue.map((task) => _taskTile(task, isOverdue: true)),
 
             const SizedBox(height: 20),
 
-            // Pending Section
+            // Pending Tasks Section
             const Text(
               'Pending Tasks',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -201,7 +257,7 @@ class _ReminderPageState extends State<ReminderPage> {
 
             const SizedBox(height: 20),
 
-            // Today's or selected day's tasks
+            // Today's Tasks
             Text(
               isSameDay(selectedDay, today)
                   ? "Today's Tasks"
@@ -216,11 +272,13 @@ class _ReminderPageState extends State<ReminderPage> {
     );
   }
 
-  Widget _taskTile(Task task) {
+  // Task UI Tile
+  Widget _taskTile(Task task, {bool isOverdue = false}) {
     return Card(
+      color: isOverdue ? Colors.red.shade100 : null,
       child: ListTile(
         leading: Checkbox(
-          value: task.isDone,
+          value: false,
           onChanged: (val) => _toggleDone(task, val),
         ),
         title: Text(task.title),
@@ -234,7 +292,7 @@ class _ReminderPageState extends State<ReminderPage> {
             ),
             IconButton(
               icon: const Icon(Icons.delete),
-              onPressed: () => _deleteTask(task.id),
+              onPressed: () => _deleteTask(task),
             ),
           ],
         ),
