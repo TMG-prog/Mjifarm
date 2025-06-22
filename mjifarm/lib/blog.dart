@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:mjifarm/article.dart';
+import 'article.dart'; // Make sure this file exists and is imported
 
 class BlogPage extends StatefulWidget {
   const BlogPage({super.key});
@@ -9,6 +11,7 @@ class BlogPage extends StatefulWidget {
 }
 
 class _BlogPageState extends State<BlogPage> {
+  // List of predefined categories
   final List<String> categories = [
     "All",
     "Tips",
@@ -17,7 +20,8 @@ class _BlogPageState extends State<BlogPage> {
     "News",
     "Trending",
   ];
-  String selectedCategory = "All";
+
+  String selectedCategory = "All"; // The currently selected category
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +34,7 @@ class _BlogPageState extends State<BlogPage> {
       ),
       body: Column(
         children: [
-          // Category Chips
+          // Category filter chips
           SizedBox(
             height: 50,
             child: ListView.builder(
@@ -40,6 +44,7 @@ class _BlogPageState extends State<BlogPage> {
               itemBuilder: (context, index) {
                 String category = categories[index];
                 bool isSelected = category == selectedCategory;
+
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 6),
                   child: ChoiceChip(
@@ -58,28 +63,42 @@ class _BlogPageState extends State<BlogPage> {
 
           const SizedBox(height: 10),
 
-          // Blog Articles from Firestore
+          // Realtime articles stream
           Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream:
-                  selectedCategory == "All"
-                      ? FirebaseFirestore.instance
-                          .collection('articles')
-                          .snapshots()
-                      : FirebaseFirestore.instance
-                          .collection('articles')
-                          .where('category', isEqualTo: selectedCategory)
-                          .snapshots(),
+            child: StreamBuilder<DatabaseEvent>(
+              stream: FirebaseDatabase.instance.ref('articles').onValue,
               builder: (context, snapshot) {
+                // Show loading spinner while waiting for data
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                // Show message if there's no data
+                if (!snapshot.hasData ||
+                    snapshot.data!.snapshot.value == null) {
                   return const Center(child: Text("No articles found"));
                 }
 
-                List<DocumentSnapshot> docs = snapshot.data!.docs;
+                // Convert database Map to a List of articles
+                final data = Map<String, dynamic>.from(
+                  snapshot.data!.snapshot.value as Map,
+                );
+
+                // Filter articles based on selected category
+                final docs =
+                    data.entries
+                        .map(
+                          (entry) => {
+                            "id": entry.key,
+                            ...Map<String, dynamic>.from(entry.value),
+                          },
+                        )
+                        .where(
+                          (doc) =>
+                              selectedCategory == "All" ||
+                              doc["category"] == selectedCategory,
+                        )
+                        .toList();
 
                 return ListView(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -97,7 +116,8 @@ class _BlogPageState extends State<BlogPage> {
     );
   }
 
-  Widget section(String title, List<DocumentSnapshot> docs) {
+  // Section for displaying articles in horizontal scroll
+  Widget section(String title, List<Map<String, dynamic>> docs) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -112,6 +132,8 @@ class _BlogPageState extends State<BlogPage> {
           ],
         ),
         const SizedBox(height: 10),
+
+        // Horizontal article cards
         SizedBox(
           height: 200,
           child: ListView.separated(
@@ -119,9 +141,7 @@ class _BlogPageState extends State<BlogPage> {
             itemCount: docs.length,
             separatorBuilder: (_, __) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
-              Map<String, dynamic> article =
-                  docs[index].data() as Map<String, dynamic>;
-              return blogCard(article);
+              return blogCard(docs[index]);
             },
           ),
         ),
@@ -129,41 +149,58 @@ class _BlogPageState extends State<BlogPage> {
     );
   }
 
+  // Individual article card
   Widget blogCard(Map<String, dynamic> article) {
-    return Container(
-      width: 140,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: Colors.grey.shade200,
-      ),
-      child: Column(
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-            child: Image.network(
-              article["imageUrl"] ?? '',
-              height: 100,
-              width: 140,
-              fit: BoxFit.cover,
-              errorBuilder:
-                  (context, error, stackTrace) => Container(
-                    height: 100,
-                    width: 140,
-                    color: Colors.grey,
-                    child: const Icon(Icons.broken_image),
-                  ),
-            ),
+    return GestureDetector(
+      onTap: () {
+        // Navigate to article detail page
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ArticleDetailPage(article: article),
           ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              article["title"] ?? '',
-              style: const TextStyle(fontSize: 12),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
+        );
+      },
+      child: Container(
+        width: 140,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: Colors.grey.shade200,
+        ),
+        child: Column(
+          children: [
+            // Article image
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(12),
+              ),
+              child: Image.network(
+                article["imageUrl"] ?? '',
+                height: 100,
+                width: 140,
+                fit: BoxFit.cover,
+                errorBuilder:
+                    (_, __, ___) => Container(
+                      height: 100,
+                      width: 140,
+                      color: Colors.grey,
+                      child: const Icon(Icons.broken_image),
+                    ),
+              ),
             ),
-          ),
-        ],
+
+            // Article title
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(
+                article["title"] ?? '',
+                style: const TextStyle(fontSize: 12),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
