@@ -242,7 +242,7 @@ class HomeDashboard extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green[700],
+                      backgroundColor: const Color.fromARGB(255, 9, 9, 9),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -271,7 +271,7 @@ class HomeDashboard extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red[600],
+                      backgroundColor: const Color.fromARGB(255, 6, 6, 6),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -287,11 +287,11 @@ class HomeDashboard extends StatelessWidget {
                       ),
                     ),
                     onPressed: () {
-                      // TODO: Navigate to Pest Alerts page
+                      //alerts navigation
 
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => PestAlertPage()),
+                        MaterialPageRoute(builder: (_) => PestAlertsPage()),
                       );
                     },
                   ),
