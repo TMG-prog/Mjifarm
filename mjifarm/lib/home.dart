@@ -35,7 +35,7 @@ class HomeScreen extends StatelessWidget {
                             padding: const EdgeInsets.all(2),
                             child: AspectRatio(
                               aspectRatio: 1,
-                              child: Image.asset('Mjifarms.jpg'),
+                              child: Image.asset('assets/Mjifarms.png'),
                             ),
                           ),
                         ],

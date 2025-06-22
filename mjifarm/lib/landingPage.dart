@@ -19,7 +19,7 @@ class LandingPage extends StatelessWidget {
           children: [
             // App Logo
             Image.asset(
-              'assets/Mjifarms.jpg', 
+              'assets/Mjifarms.png', 
               width: 200,
               height: 200,
             ),
