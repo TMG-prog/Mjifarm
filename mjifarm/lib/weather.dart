@@ -215,7 +215,6 @@ class WeatherPage extends StatelessWidget {
   }
 }
 
-// ✅ Place this **outside** the WeatherPage widget class
 class WeatherData {
   final String temperature;
   final String condition;
