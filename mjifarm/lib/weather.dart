@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
+
 void main() {
-  runApp(MaterialApp(
-    home: WeatherPage(),
-    debugShowCheckedModeBanner: false,
-  ));
+  runApp(MaterialApp(home: WeatherPage(), debugShowCheckedModeBanner: false));
 }
+
 class WeatherPage extends StatelessWidget {
   const WeatherPage({super.key});
 
@@ -214,4 +213,16 @@ class WeatherPage extends StatelessWidget {
       ),
     );
   }
+}
+
+class WeatherData {
+  final String temperature;
+  final String condition;
+
+  WeatherData({required this.temperature, required this.condition});
+}
+
+WeatherData getTodayWeatherSummary() {
+  // Replace these hardcoded values with actual data retrieval logic if needed
+  return WeatherData(temperature: '24°C', condition: 'Partly Cloudy');
 }
