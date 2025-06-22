@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:intl/intl.dart';
+import 'package:mjifarm/pests.dart';
 
 import 'article.dart';
 import 'newplant.dart';
@@ -15,7 +16,7 @@ class HomeDashboard extends StatelessWidget {
 
     return SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(15),
+        padding: const EdgeInsets.fromLTRB(15, 15, 15, 100),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -46,17 +47,6 @@ class HomeDashboard extends StatelessWidget {
                     );
                   },
                   child: _buildCard('Weather'),
-                ),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ExpertSelectionScreen(),
-                      ),
-                    );
-                  },
-                  child: _buildCard('Contact an Expert'),
                 ),
               ],
             ),
@@ -91,7 +81,7 @@ class HomeDashboard extends StatelessWidget {
                     padding: const EdgeInsets.all(12),
                     margin: const EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFF3E0), // light orange for empty
+                      color: const Color(0xFFFFF3E0),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Row(
@@ -112,12 +102,11 @@ class HomeDashboard extends StatelessWidget {
                   );
                 }
 
-                // ✅ Display tip in a bubble
                 return Container(
                   padding: const EdgeInsets.all(12),
                   margin: const EdgeInsets.symmetric(vertical: 10),
                   decoration: BoxDecoration(
-                    color: const Color.fromARGB(255, 15, 37, 17), // soft green
+                    color: const Color.fromARGB(255, 15, 37, 17),
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
@@ -153,7 +142,6 @@ class HomeDashboard extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // In the Farm section
             GestureDetector(
               onTap: () {
                 Navigator.push(
@@ -198,7 +186,6 @@ class HomeDashboard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
 
-            // Firebase Trending Articles
             SizedBox(
               height: 180,
               child: FutureBuilder<DatabaseEvent>(
@@ -243,6 +230,74 @@ class HomeDashboard extends StatelessWidget {
                 },
               ),
             ),
+
+            const SizedBox(height: 30),
+
+            // 📞 Contact Expert Button at Bottom
+            const SizedBox(height: 30),
+
+            // 📞 Contact Expert + Pest Alerts Buttons at Bottom
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green[700],
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.support_agent, color: Colors.white),
+                    label: const Text(
+                      'Contact Expert',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ExpertSelectionScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red[600],
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.bug_report, color: Colors.white),
+                    label: const Text(
+                      'Pest Alerts',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    onPressed: () {
+                      // TODO: Navigate to Pest Alerts page
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => PestAlertPage()),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -283,7 +338,7 @@ class HomeDashboard extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 30,
-              backgroundColor: Colors.grey[200],
+              backgroundColor: Colors.green.shade200,
               child:
                   icon != null
                       ? Icon(icon, size: 30, color: Colors.black)
