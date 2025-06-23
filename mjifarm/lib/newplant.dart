@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:image_picker/image_picker.dart';
+// import 'package:image_picker/image_picker.dart'; // Removed as manual picking is no longer allowed
 import 'dart:io';
 import 'dart:convert';
+import 'package:intl/intl.dart';
 
-import 'plants.dart'; 
+import 'plants.dart'; // Assuming this file defines your Plant model if used elsewhere
 
 class NewPlantPage extends StatefulWidget {
   @override
@@ -13,14 +14,6 @@ class NewPlantPage extends StatefulWidget {
 }
 
 class _NewPlantPageState extends State<NewPlantPage> {
-  final _categories = [
-    'Vegetable',
-    'Fruit',
-    'Herb',
-    'Legume',
-    'Tree',
-    'Cereal',
-  ];
   final _containerTypes = [
     'Sack',
     'Plastic Container',
@@ -29,23 +22,24 @@ class _NewPlantPageState extends State<NewPlantPage> {
     'None',
   ];
 
-  String? _selectedCategory;
+  String? _selectedCropType;
   String? _selectedContainer;
   String? _selectedGardenId;
   String? _selectedGardenName;
 
   DateTime? _plantingDate;
-  DateTime? _maturityDate;
   final _nameController = TextEditingController();
 
   User? _currentUser;
   List<DataSnapshot> _userGardens = [];
+  Map<String, int> _cropHarvestDurations = {}; // Stores crop type -> harvest days
+  Map<String, String> _cropImagesBase64 = {}; // New: Stores crop type -> base64 image string
 
   bool _isLoadingGardens = true;
+  bool _isLoadingCropData = true;
 
-  String? _pickedImageBase64;
+  String? _currentCropImageBase64; // Used to display the selected crop's image
 
-  // New TextEditingControllers for the garden dialog
   final _newGardenNameController = TextEditingController();
   final _newGardenLocationController = TextEditingController();
 
@@ -54,6 +48,7 @@ class _NewPlantPageState extends State<NewPlantPage> {
     super.initState();
     _currentUser = FirebaseAuth.instance.currentUser;
     _fetchUserGardens();
+    _fetchCropData();
   }
 
   @override
@@ -63,6 +58,44 @@ class _NewPlantPageState extends State<NewPlantPage> {
     _newGardenLocationController.dispose();
     super.dispose();
   }
+
+  Future<void> _fetchCropData() async {
+    try {
+      final DatabaseReference cropsRef = FirebaseDatabase.instance.ref('crops');
+      final DatabaseEvent event = await cropsRef.once();
+      final DataSnapshot dataSnapshot = event.snapshot;
+
+      Map<String, int> fetchedDurations = {};
+      Map<String, String> fetchedImages = {};
+
+      if (dataSnapshot.value != null && dataSnapshot.value is Map) {
+        Map<dynamic, dynamic> cropsMap = dataSnapshot.value as Map<dynamic, dynamic>;
+        cropsMap.forEach((key, value) {
+          if (value is Map) {
+            if (value.containsKey('harvestDurationDays')) {
+              fetchedDurations[key as String] = value['harvestDurationDays'] as int;
+            }
+            if (value.containsKey('imageBase64')) {
+              fetchedImages[key as String] = value['imageBase64'] as String;
+            }
+          }
+        });
+      }
+
+      setState(() {
+        _cropHarvestDurations = fetchedDurations;
+        _cropImagesBase64 = fetchedImages;
+        _isLoadingCropData = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingCropData = false;
+      });
+      _showError('Failed to load crop information: $e');
+      print('Error fetching crop data from RTDB: $e');
+    }
+  }
+
 
   Future<void> _fetchUserGardens() async {
     if (_currentUser == null) {
@@ -93,7 +126,6 @@ class _NewPlantPageState extends State<NewPlantPage> {
       setState(() {
         _userGardens = fetchedGardens;
         _isLoadingGardens = false;
-        // If there's only one garden, pre-select it
         if (_userGardens.length == 1) {
           final gardenData = _userGardens.first.value as Map;
           _selectedGardenName = gardenData['name'] as String;
@@ -112,7 +144,7 @@ class _NewPlantPageState extends State<NewPlantPage> {
     }
   }
 
-  Future<void> _selectDate(BuildContext context, bool isPlantingDate) async {
+  Future<void> _selectPlantingDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -121,34 +153,12 @@ class _NewPlantPageState extends State<NewPlantPage> {
     );
     if (picked != null) {
       setState(() {
-        if (isPlantingDate) {
-          _plantingDate = picked;
-        } else {
-          _maturityDate = picked;
-        }
+        _plantingDate = picked;
       });
     }
   }
 
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final XFile? pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 50);
-
-    if (pickedFile != null) {
-      try {
-        List<int> imageBytes = await pickedFile.readAsBytes();
-        setState(() {
-          _pickedImageBase64 = base64Encode(imageBytes);
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Image selected and converted.')),
-        );
-      } catch (e) {
-        _showError('Failed to process image: $e');
-        print('Error converting image to Base64: $e');
-      }
-    }
-  }
+  // Removed _pickImage() method entirely as per user's request
 
   Future<void> _savePlant() async {
     if (_currentUser == null) {
@@ -156,13 +166,21 @@ class _NewPlantPageState extends State<NewPlantPage> {
       return;
     }
 
+    DateTime? calculatedMaturityDate;
+    if (_plantingDate != null && _selectedCropType != null) {
+      final int? harvestDays = _cropHarvestDurations[_selectedCropType];
+      if (harvestDays != null) {
+        calculatedMaturityDate = _plantingDate!.add(Duration(days: harvestDays));
+      }
+    }
+
     if (_nameController.text.isEmpty ||
-        _selectedCategory == null ||
+        _selectedCropType == null ||
         _selectedContainer == null ||
         _selectedGardenId == null ||
         _plantingDate == null ||
-        _maturityDate == null) {
-      _showError('Please fill in all fields before saving.');
+        calculatedMaturityDate == null) {
+      _showError('Please fill in all fields and select a valid crop type with planting date.');
       return;
     }
 
@@ -178,15 +196,15 @@ class _NewPlantPageState extends State<NewPlantPage> {
 
       await plantsRef.push().set({
         'name': _nameController.text,
-        'category': _selectedCategory,
+        'category': _selectedCropType,
         'container': _selectedContainer,
         'gardenName': _selectedGardenName,
         'gardenId': _selectedGardenId,
         'plantingDate': _plantingDate!.toIso8601String(),
-        'maturityDate': _maturityDate!.toIso8601String(),
+        'maturityDate': calculatedMaturityDate!.toIso8601String(),
         'userID': _currentUser!.uid,
         'timestamp': ServerValue.timestamp,
-        'imageBase64': _pickedImageBase64,
+        'imageBase64': _currentCropImageBase64, // Use the image from the selected crop
       });
 
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -219,11 +237,11 @@ class _NewPlantPageState extends State<NewPlantPage> {
         'createdAt': ServerValue.timestamp,
       });
 
-      _newGardenNameController.clear(); // Clear text fields after saving
+      _newGardenNameController.clear();
       _newGardenLocationController.clear();
 
-      Navigator.of(context).pop(); // Dismiss the dialog
-      await _fetchUserGardens(); // Re-fetch gardens to update the dropdown
+      Navigator.of(context).pop();
+      await _fetchUserGardens();
 
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -265,7 +283,7 @@ class _NewPlantPageState extends State<NewPlantPage> {
               },
             ),
             ElevatedButton(
-              onPressed: _createNewGarden, // Call the new create function
+              onPressed: _createNewGarden,
               child: const Text('Save Garden'),
             ),
           ],
@@ -315,17 +333,20 @@ class _NewPlantPageState extends State<NewPlantPage> {
     String? selectedValue,
     Function(String?) onChanged, {
     String? hintText,
+    bool isLoading = false,
   }) {
     return ListTile(
       title: Text(title),
-      trailing: DropdownButton<String>(
-        hint: Text(hintText ?? 'Select'),
-        value: selectedValue,
-        onChanged: items.isEmpty ? null : onChanged,
-        items: items
-            .map((val) => DropdownMenuItem(value: val, child: Text(val)))
-            .toList(),
-      ),
+      trailing: isLoading
+          ? const CircularProgressIndicator()
+          : DropdownButton<String>(
+              hint: Text(hintText ?? 'Select'),
+              value: selectedValue,
+              onChanged: items.isEmpty ? null : onChanged,
+              items: items
+                  .map((val) => DropdownMenuItem(value: val, child: Text(val)))
+                  .toList(),
+            ),
     );
   }
 
@@ -333,7 +354,7 @@ class _NewPlantPageState extends State<NewPlantPage> {
     return ListTile(
       title: Text(title),
       subtitle: Text(
-        date == null ? 'Select date' : '${date.toLocal()}'.split(' ')[0],
+        date == null ? 'Select date' : DateFormat('yyyy-MM-dd').format(date.toLocal()),
       ),
       trailing: const Icon(Icons.calendar_today),
       onTap: onTap,
@@ -342,6 +363,8 @@ class _NewPlantPageState extends State<NewPlantPage> {
 
   @override
   Widget build(BuildContext context) {
+    bool overallLoading = _isLoadingGardens || _isLoadingCropData;
+
     return Scaffold(
       appBar: AppBar(
         leading: const BackButton(),
@@ -349,49 +372,67 @@ class _NewPlantPageState extends State<NewPlantPage> {
         title: const Text('New Plant'),
         centerTitle: true,
       ),
-      body: _isLoadingGardens
+      body: overallLoading
           ? const Center(child: CircularProgressIndicator())
           : Padding(
               padding: const EdgeInsets.all(10.0),
               child: ListView(
                 children: [
-                  GestureDetector(
-                    onTap: _pickImage,
-                    child: CircleAvatar(
-                      radius: 50,
-                      backgroundColor: Colors.grey[300],
-                      backgroundImage: _pickedImageBase64 != null
-                          ? MemoryImage(base64Decode(_pickedImageBase64!))
-                          : null,
-                      child: _pickedImageBase64 == null
-                          ? const Icon(Icons.camera_alt, size: 30, color: Colors.black54)
-                          : null,
-                    ),
+                  // Image display now uses _currentCropImageBase64, no picking
+                  CircleAvatar(
+                    radius: 50,
+                    backgroundColor: Colors.grey[300],
+                    backgroundImage: _currentCropImageBase64 != null && _currentCropImageBase64!.isNotEmpty
+                        ? MemoryImage(base64Decode(_currentCropImageBase64!))
+                        : null,
+                    child: (_currentCropImageBase64 == null || _currentCropImageBase64!.isEmpty)
+                        ? const Icon(Icons.grass, size: 30, color: Colors.black54) // Generic plant icon
+                        : null,
                   ),
                   const SizedBox(height: 20),
+
+                  // Name field (autofilled, but still editable)
                   ListTile(
-                    title: const Text('Name'),
+                    title: const Text('Plant Name'),
                     subtitle: TextField(
                       controller: _nameController,
                       decoration: const InputDecoration.collapsed(
-                        hintText: 'Add name of crop',
+                        hintText: 'e.g., My Special Tomato',
                       ),
                     ),
-                    trailing: const Icon(Icons.chevron_right),
+                    trailing: const Icon(Icons.edit), // Changed icon to suggest editability
                   ),
                   const Divider(),
+
+                  // Crop Type Dropdown
                   _buildDropdown(
-                    'Category',
-                    _categories,
-                    _selectedCategory,
-                    (val) => setState(() => _selectedCategory = val),
+                    'Crop Type',
+                    _cropHarvestDurations.keys.toList(),
+                    _selectedCropType,
+                    (val) {
+                      setState(() {
+                        _selectedCropType = val;
+                        // Autofill name and set default image when crop type changes
+                        if (val != null) {
+                          _nameController.text = val; // Autofill name
+                          _currentCropImageBase64 = _cropImagesBase64[val]; // Set default image
+                        } else {
+                          _nameController.clear();
+                          _currentCropImageBase64 = null;
+                        }
+                      });
+                    },
+                    isLoading: _isLoadingCropData,
+                    hintText: 'Select a crop type',
                   ),
+
                   _buildDropdown(
                     'Container Type',
                     _containerTypes,
                     _selectedContainer,
                     (val) => setState(() => _selectedContainer = val),
                   ),
+
                   _userGardens.isEmpty
                       ? Padding(
                           padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
@@ -404,7 +445,7 @@ class _NewPlantPageState extends State<NewPlantPage> {
                               ),
                               const SizedBox(height: 10),
                               ElevatedButton.icon(
-                                onPressed: _showCreateGardenDialog, // CALLS THE DIALOG HERE
+                                onPressed: _showCreateGardenDialog,
                                 icon: const Icon(Icons.add),
                                 label: const Text('Create New Garden'),
                                 style: ElevatedButton.styleFrom(
@@ -433,32 +474,31 @@ class _NewPlantPageState extends State<NewPlantPage> {
                           },
                           hintText: 'Select',
                         ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildDateTile(
-                          'Planting Date',
-                          _plantingDate,
-                          () => _selectDate(context, true),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _buildDateTile(
-                          'Maturity Date',
-                          _maturityDate,
-                          () => _selectDate(context, false),
-                        ),
-                      ),
-                    ],
+                  
+                  _buildDateTile(
+                    'Planting Date',
+                    _plantingDate,
+                    () => _selectPlantingDate(context),
                   ),
+                  
+                  if (_plantingDate != null && _selectedCropType != null && _cropHarvestDurations.containsKey(_selectedCropType))
+                    ListTile(
+                      title: const Text('Expected Maturity Date'),
+                      subtitle: Text(
+                        DateFormat('yyyy-MM-dd').format(_plantingDate!
+                            .add(Duration(days: _cropHarvestDurations[_selectedCropType]!))
+                            .toLocal()),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      trailing: const Icon(Icons.info_outline),
+                    ),
                   const Divider(),
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: ElevatedButton(
-                      onPressed: _userGardens.isEmpty ? null : _savePlant,
+                      onPressed: (_userGardens.isEmpty || _selectedCropType == null || _plantingDate == null || _nameController.text.isEmpty) ? null : _savePlant,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: _userGardens.isEmpty ? Colors.grey : const Color.fromARGB(255, 34, 94, 36),
+                        backgroundColor: (_userGardens.isEmpty || _selectedCropType == null || _plantingDate == null || _nameController.text.isEmpty) ? Colors.grey : const Color.fromARGB(255, 34, 94, 36),
                         foregroundColor: Colors.white,
                         minimumSize: const Size(double.infinity, 50),
                         shape: RoundedRectangleBorder(
