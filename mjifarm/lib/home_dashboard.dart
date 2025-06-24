@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:mjifarm/plantdetails.dart'; // Added by colleague
+import 'dart:convert'; // Added by colleague for base64Decode
 
-// ONLY change this import for weather:
-import 'package:mjifarm/weather.dart'; // Import the entire weather.dart file
+import 'package:mjifarm/weather.dart'; // Retained for getTodayWeatherSummary and WeatherData
 import 'package:mjifarm/reminder.dart';
 import 'package:mjifarm/pests.dart';
 import 'package:mjifarm/plants.dart';
@@ -12,7 +13,7 @@ import 'package:mjifarm/newplant.dart';
 import 'package:mjifarm/article.dart';
 import 'package:mjifarm/farmer_features/expert_selection.dart';
 import 'package:mjifarm/auth_gate.dart';
-import 'package:mjifarm/weather_page.dart'; // Import WeatherPage for navigation
+import 'package:mjifarm/weather_page.dart'; // Re-added for navigation to WeatherPage
 
 class HomeDashboard extends StatelessWidget {
   const HomeDashboard({
@@ -49,7 +50,7 @@ class HomeDashboard extends StatelessWidget {
             TextField(
               decoration: InputDecoration(
                 hintText: 'Search',
-                prefixIcon: const Icon(Icons.search), // Added const
+                prefixIcon: const Icon(Icons.search),
                 filled: true,
                 fillColor: Colors.grey.shade200,
                 border: OutlineInputBorder(
@@ -167,16 +168,16 @@ class HomeDashboard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 10),
-                // Weather Card (CHANGED HERE)
+                // Weather Card (Reverted to FutureBuilder for async handling)
                 Expanded(
                   child: GestureDetector(
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const WeatherPage()),
+                        MaterialPageRoute(builder: (_) => const WeatherPage()), // Ensure WeatherPage is imported
                       );
                     },
-                    child: FutureBuilder<WeatherData>( // Use FutureBuilder
+                    child: FutureBuilder<WeatherData>( // Use FutureBuilder for async operation
                       future: getTodayWeatherSummary(), // Call the async function
                       builder: (context, snapshot) {
                         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -185,6 +186,7 @@ class HomeDashboard extends StatelessWidget {
                             subtitle: 'Loading...',
                           );
                         } else if (snapshot.hasError) {
+                          // Consider showing a more user-friendly error
                           return _buildCard(
                             'Weather',
                             subtitle: 'Error: ${snapshot.error}', // Display error
@@ -193,6 +195,8 @@ class HomeDashboard extends StatelessWidget {
                           final weatherSummary = snapshot.data!;
                           return _buildCard(
                             'Weather',
+                            // Use combined display from previous discussions if desired,
+                            // or keep it simple as temperature, condition
                             subtitle: '${weatherSummary.temperature}°C, ${weatherSummary.condition}',
                           );
                         }
@@ -213,7 +217,7 @@ class HomeDashboard extends StatelessWidget {
             ),
             const SizedBox(height: 5),
 
-            // 🌞 Tip of the Day
+            // Tip of the Day
             FutureBuilder<DatabaseEvent>(
               future: FirebaseDatabase.instance.ref('tips/$todayDate').once(),
               builder: (context, snapshot) {
@@ -265,13 +269,30 @@ class HomeDashboard extends StatelessWidget {
             ),
             const SizedBox(height: 15),
 
+            // Plants in the farm (dynamic loading)
             SizedBox(
-              height: 90,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  _buildFarmCircle(context, icon: Icons.add, label: 'Add'),
-                ],
+              height: 100, // Adjusted height as per colleague's code
+              child: FutureBuilder<List<Widget>>(
+                future: _buildFarmPlantCircles(context), // Call the new async function
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  } else if (snapshot.hasError) {
+                    return Center(child: Text('Error loading plants: ${snapshot.error}'));
+                  }
+
+                  final plantWidgets = snapshot.data ?? [];
+
+                  return ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      // "Add" button always first
+                      _buildFarmCircle(context, icon: Icons.add, label: 'Add'),
+                      const SizedBox(width: 10), // Spacing after add button
+                      ...plantWidgets, // Dynamically loaded plant circles
+                    ],
+                  );
+                },
               ),
             ),
 
@@ -427,14 +448,14 @@ class HomeDashboard extends StatelessWidget {
             ),
         ],
       ),
-    );
+      );
   }
 
-  // Circular farm action (add/view)
+  // Circular farm action (specifically for the "Add" button in this context)
   static Widget _buildFarmCircle(
     BuildContext context, {
     IconData? icon,
-    String? image,
+    // String? image, // Not needed for the "Add" button
     required String label,
   }) {
     return GestureDetector(
@@ -453,19 +474,7 @@ class HomeDashboard extends StatelessWidget {
             CircleAvatar(
               radius: 30,
               backgroundColor: Colors.green.shade200,
-              child:
-                  icon != null
-                      ? Icon(icon, size: 30, color: Colors.black)
-                      : image != null
-                          ? ClipOval(
-                              child: Image.asset(
-                                image!,
-                                fit: BoxFit.cover,
-                                height: 60,
-                                width: 60,
-                              ),
-                            )
-                          : null,
+              child: Icon(icon, size: 30, color: Colors.black),
             ),
             const SizedBox(height: 5),
             Text(label, style: const TextStyle(fontSize: 12)),
@@ -547,7 +556,6 @@ class HomeDashboard extends StatelessWidget {
                 ? []
                 : [
                     const BoxShadow(
-                      // Added const
                       color: Colors.black12,
                       blurRadius: 4,
                       offset: Offset(0, 2),
@@ -579,4 +587,85 @@ class HomeDashboard extends StatelessWidget {
       ),
     );
   }
+}
+
+// New helper function added by your colleague to build plant circles dynamically
+Future<List<Widget>> _buildFarmPlantCircles(BuildContext context) async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return [];
+
+  final gardensRef = FirebaseDatabase.instance.ref('gardens');
+  final snapshot =
+      await gardensRef.orderByChild('userID').equalTo(user.uid).once();
+
+  if (snapshot.snapshot.value == null) return [];
+
+  final gardensMap = Map<String, dynamic>.from(snapshot.snapshot.value as Map);
+  final List<Map<String, dynamic>> allPlants = [];
+
+  gardensMap.forEach((gardenId, gardenData) {
+    final garden = Map<String, dynamic>.from(gardenData);
+    if (garden.containsKey('plants')) {
+      final plants = Map<String, dynamic>.from(garden['plants']);
+      plants.forEach((plantId, plantData) {
+        allPlants.add({
+          ...Map<String, dynamic>.from(plantData),
+          'gardenName': garden['name'] ?? 'Unknown',
+        });
+      });
+    }
+  });
+
+  return allPlants.map((plant) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (_) => PlantDetailsPage(
+                    name: plant['name'] ?? 'Unnamed Plant',
+                    imagePath:
+                        plant['imageBase64'] != null
+                            ? 'data:image/jpeg;base64,${plant['imageBase64']}' // Correctly handles base64 image path
+                            : 'assets/plant.png', // Fallback for asset image
+                    growthStatus: 'View Details',
+                    growthPercentage: 0, // Placeholder, actual logic might be needed
+                    harvestDate: plant['maturityDate'] ?? 'Unknown',
+                    gardenName: plant['gardenName'],
+                    container: plant['container'],
+                    category: plant['category'],
+                    plantingDate: plant['plantingDate'],
+                  ),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(right: 10),
+        child: Column(
+          children: [
+            CircleAvatar(
+              radius: 30,
+              backgroundColor: Colors.green.shade200,
+              // Use MemoryImage for base64 strings, otherwise use AssetImage
+              backgroundImage:
+                  plant['imageBase64'] != null
+                      ? MemoryImage(base64Decode(plant['imageBase64']))
+                      : const AssetImage('assets/plant.png') as ImageProvider,
+            ),
+            const SizedBox(height: 5),
+            SizedBox(
+              width: 60, // Constrain width for plant name text
+              child: Text(
+                plant['name'] ?? '',
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }).toList();
 }
