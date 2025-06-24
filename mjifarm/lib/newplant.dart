@@ -34,8 +34,10 @@ class _NewPlantPageState extends State<NewPlantPage> {
 
   User? _currentUser;
   List<DataSnapshot> _userGardens = [];
-  Map<String, int> _cropHarvestDurations = {}; // Stores crop type -> harvest days
-  Map<String, String> _cropImagesBase64 = {}; // New: Stores crop type -> base64 image string
+  Map<String, int> _cropHarvestDurations =
+      {}; // Stores crop type -> harvest days
+  Map<String, String> _cropImagesBase64 =
+      {}; // New: Stores crop type -> base64 image string
 
   bool _isLoadingGardens = true;
   bool _isLoadingCropData = true;
@@ -71,11 +73,13 @@ class _NewPlantPageState extends State<NewPlantPage> {
       Map<String, String> fetchedImages = {};
 
       if (dataSnapshot.value != null && dataSnapshot.value is Map) {
-        Map<dynamic, dynamic> cropsMap = dataSnapshot.value as Map<dynamic, dynamic>;
+        Map<dynamic, dynamic> cropsMap =
+            dataSnapshot.value as Map<dynamic, dynamic>;
         cropsMap.forEach((key, value) {
           if (value is Map) {
             if (value.containsKey('harvestDurationDays')) {
-              fetchedDurations[key as String] = value['harvestDurationDays'] as int;
+              fetchedDurations[key as String] =
+                  value['harvestDurationDays'] as int;
             }
             if (value.containsKey('imageBase64')) {
               fetchedImages[key as String] = value['imageBase64'] as String;
@@ -98,7 +102,6 @@ class _NewPlantPageState extends State<NewPlantPage> {
     }
   }
 
-
   Future<void> _fetchUserGardens() async {
     if (_currentUser == null) {
       setState(() {
@@ -109,17 +112,21 @@ class _NewPlantPageState extends State<NewPlantPage> {
     }
 
     try {
-      final DatabaseReference gardensRef = FirebaseDatabase.instance.ref('gardens');
-      final DatabaseEvent event = await gardensRef
-          .orderByChild('userID')
-          .equalTo(_currentUser!.uid)
-          .once();
+      final DatabaseReference gardensRef = FirebaseDatabase.instance.ref(
+        'gardens',
+      );
+      final DatabaseEvent event =
+          await gardensRef
+              .orderByChild('userID')
+              .equalTo(_currentUser!.uid)
+              .once();
 
       final DataSnapshot dataSnapshot = event.snapshot;
 
       List<DataSnapshot> fetchedGardens = [];
       if (dataSnapshot.value != null && dataSnapshot.value is Map) {
-        Map<dynamic, dynamic> gardensMap = dataSnapshot.value as Map<dynamic, dynamic>;
+        Map<dynamic, dynamic> gardensMap =
+            dataSnapshot.value as Map<dynamic, dynamic>;
         gardensMap.forEach((key, value) {
           fetchedGardens.add(dataSnapshot.child(key));
         });
@@ -172,7 +179,9 @@ class _NewPlantPageState extends State<NewPlantPage> {
     if (_plantingDate != null && _selectedCropType != null) {
       final int? harvestDays = _cropHarvestDurations[_selectedCropType];
       if (harvestDays != null) {
-        calculatedMaturityDate = _plantingDate!.add(Duration(days: harvestDays));
+        calculatedMaturityDate = _plantingDate!.add(
+          Duration(days: harvestDays),
+        );
       }
     }
 
@@ -182,14 +191,16 @@ class _NewPlantPageState extends State<NewPlantPage> {
         _selectedGardenId == null ||
         _plantingDate == null ||
         calculatedMaturityDate == null) {
-      _showError('Please fill in all fields and select a valid crop type with planting date.');
+      _showError(
+        'Please fill in all fields and select a valid crop type with planting date.',
+      );
       return;
     }
 
     try {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Saving plant data...')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Saving plant data...')));
 
       final DatabaseReference plantsRef = FirebaseDatabase.instance
           .ref('gardens')
@@ -206,7 +217,8 @@ class _NewPlantPageState extends State<NewPlantPage> {
         'maturityDate': calculatedMaturityDate.toIso8601String(),
         'userID': _currentUser!.uid,
         'timestamp': ServerValue.timestamp,
-        'imageBase64': _currentCropImageBase64, // Use the image from the selected crop
+        'imageBase64':
+            _currentCropImageBase64, // Use the image from the selected crop
       });
 
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -222,15 +234,16 @@ class _NewPlantPageState extends State<NewPlantPage> {
       _showError('You must be logged in to create a garden.');
       return;
     }
-    if (_newGardenNameController.text.isEmpty || _newGardenLocationController.text.isEmpty) {
+    if (_newGardenNameController.text.isEmpty ||
+        _newGardenLocationController.text.isEmpty) {
       _showError('Please enter both garden name and location.');
       return;
     }
 
     try {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Creating new garden...')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Creating new garden...')));
 
       await FirebaseDatabase.instance.ref('gardens').push().set({
         'name': _newGardenNameController.text,
@@ -297,35 +310,37 @@ class _NewPlantPageState extends State<NewPlantPage> {
   void _showError(String message) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Error'),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+      builder:
+          (_) => AlertDialog(
+            title: const Text('Error'),
+            content: Text(message),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
   void _showSuccess() {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Success'),
-        content: const Text('Plant saved!'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pushReplacementNamed(context, '/myplants');
-            },
-            child: const Text('OK'),
+      builder:
+          (_) => AlertDialog(
+            title: const Text('Success'),
+            content: const Text('Plant saved!'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacementNamed(context, '/myplants');
+                },
+                child: const Text('OK'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
@@ -339,16 +354,21 @@ class _NewPlantPageState extends State<NewPlantPage> {
   }) {
     return ListTile(
       title: Text(title),
-      trailing: isLoading
-          ? const CircularProgressIndicator()
-          : DropdownButton<String>(
-              hint: Text(hintText ?? 'Select'),
-              value: selectedValue,
-              onChanged: items.isEmpty ? null : onChanged,
-              items: items
-                  .map((val) => DropdownMenuItem(value: val, child: Text(val)))
-                  .toList(),
-            ),
+      trailing:
+          isLoading
+              ? const CircularProgressIndicator()
+              : DropdownButton<String>(
+                hint: Text(hintText ?? 'Select'),
+                value: selectedValue,
+                onChanged: items.isEmpty ? null : onChanged,
+                items:
+                    items
+                        .map(
+                          (val) =>
+                              DropdownMenuItem(value: val, child: Text(val)),
+                        )
+                        .toList(),
+              ),
     );
   }
 
@@ -356,7 +376,9 @@ class _NewPlantPageState extends State<NewPlantPage> {
     return ListTile(
       title: Text(title),
       subtitle: Text(
-        date == null ? 'Select date' : DateFormat('yyyy-MM-dd').format(date.toLocal()),
+        date == null
+            ? 'Select date'
+            : DateFormat('yyyy-MM-dd').format(date.toLocal()),
       ),
       trailing: const Icon(Icons.calendar_today),
       onTap: onTap,
@@ -374,75 +396,95 @@ class _NewPlantPageState extends State<NewPlantPage> {
         title: const Text('New Plant'),
         centerTitle: true,
       ),
-      body: overallLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(10.0),
-              child: ListView(
-                children: [
-                  // Image display now uses _currentCropImageBase64, no picking
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundColor: Colors.grey[300],
-                    backgroundImage: _currentCropImageBase64 != null && _currentCropImageBase64!.isNotEmpty
-                        ? MemoryImage(base64Decode(_currentCropImageBase64!))
-                        : null,
-                    child: (_currentCropImageBase64 == null || _currentCropImageBase64!.isEmpty)
-                        ? const Icon(Icons.grass, size: 30, color: Colors.black54) // Generic plant icon
-                        : null,
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Name field (autofilled, but still editable)
-                  ListTile(
-                    title: const Text('Plant Name'),
-                    subtitle: TextField(
-                      controller: _nameController,
-                      decoration: const InputDecoration.collapsed(
-                        hintText: 'e.g., My Special Tomato',
-                      ),
+      body:
+          overallLoading
+              ? const Center(child: CircularProgressIndicator())
+              : Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: ListView(
+                  children: [
+                    // Image display now uses _currentCropImageBase64, no picking
+                    CircleAvatar(
+                      radius: 50,
+                      backgroundColor: Colors.grey[300],
+                      backgroundImage:
+                          _currentCropImageBase64 != null &&
+                                  _currentCropImageBase64!.isNotEmpty
+                              ? MemoryImage(
+                                base64Decode(_currentCropImageBase64!),
+                              )
+                              : null,
+                      child:
+                          (_currentCropImageBase64 == null ||
+                                  _currentCropImageBase64!.isEmpty)
+                              ? const Icon(
+                                Icons.grass,
+                                size: 30,
+                                color: Colors.black54,
+                              ) // Generic plant icon
+                              : null,
                     ),
-                    trailing: const Icon(Icons.edit), // Changed icon to suggest editability
-                  ),
-                  const Divider(),
+                    const SizedBox(height: 20),
 
-                  // Crop Type Dropdown
-                  _buildDropdown(
-                    'Crop Type',
-                    _cropHarvestDurations.keys.toList(),
-                    _selectedCropType,
-                    (val) {
-                      setState(() {
-                        _selectedCropType = val;
-                        // Autofill name and set default image when crop type changes
-                        if (val != null) {
-                          _nameController.text = val; // Autofill name
-                          _currentCropImageBase64 = _cropImagesBase64[val]; // Set default image
-                        } else {
-                          _nameController.clear();
-                          _currentCropImageBase64 = null;
-                        }
-                      });
-                    },
-                    isLoading: _isLoadingCropData,
-                    hintText: 'Select a crop type',
-                  ),
+                    // Name field (autofilled, but still editable)
+                    ListTile(
+                      title: const Text('Plant Name'),
+                      subtitle: TextField(
+                        controller: _nameController,
+                        decoration: const InputDecoration.collapsed(
+                          hintText: 'e.g., My Special Tomato',
+                        ),
+                      ),
+                      trailing: const Icon(
+                        Icons.edit,
+                      ), // Changed icon to suggest editability
+                    ),
+                    const Divider(),
 
-                  _buildDropdown(
-                    'Container Type',
-                    _containerTypes,
-                    _selectedContainer,
-                    (val) => setState(() => _selectedContainer = val),
-                  ),
+                    // Crop Type Dropdown
+                    _buildDropdown(
+                      'Crop Type',
+                      _cropHarvestDurations.keys.toList(),
+                      _selectedCropType,
+                      (val) {
+                        setState(() {
+                          _selectedCropType = val;
+                          // Autofill name and set default image when crop type changes
+                          if (val != null) {
+                            _nameController.text = val; // Autofill name
+                            _currentCropImageBase64 =
+                                _cropImagesBase64[val]; // Set default image
+                          } else {
+                            _nameController.clear();
+                            _currentCropImageBase64 = null;
+                          }
+                        });
+                      },
+                      isLoading: _isLoadingCropData,
+                      hintText: 'Select a crop type',
+                    ),
 
-                  _userGardens.isEmpty
-                      ? Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
+                    _buildDropdown(
+                      'Container Type',
+                      _containerTypes,
+                      _selectedContainer,
+                      (val) => setState(() => _selectedContainer = val),
+                    ),
+
+                    _userGardens.isEmpty
+                        ? Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 20.0,
+                            horizontal: 16.0,
+                          ),
                           child: Column(
                             children: [
                               const Text(
                                 'You haven\'t created any gardens yet.',
-                                style: TextStyle(fontSize: 16, color: Colors.grey),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey,
+                                ),
                                 textAlign: TextAlign.center,
                               ),
                               const SizedBox(height: 10),
@@ -453,7 +495,10 @@ class _NewPlantPageState extends State<NewPlantPage> {
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.green,
                                   foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 12,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(8),
                                   ),
@@ -462,57 +507,91 @@ class _NewPlantPageState extends State<NewPlantPage> {
                             ],
                           ),
                         )
-                      : _buildDropdown(
+                        : _buildDropdown(
                           'Garden',
-                          _userGardens.map((snapshot) => (snapshot.value as Map)['name'] as String).toList(),
+                          _userGardens
+                              .map(
+                                (snapshot) =>
+                                    (snapshot.value as Map)['name'] as String,
+                              )
+                              .toList(),
                           _selectedGardenName,
                           (val) {
                             setState(() {
                               _selectedGardenName = val;
-                              _selectedGardenId = _userGardens
-                                  .firstWhere((snapshot) => (snapshot.value as Map)['name'] == val)
-                                  .key;
+                              _selectedGardenId =
+                                  _userGardens
+                                      .firstWhere(
+                                        (snapshot) =>
+                                            (snapshot.value as Map)['name'] ==
+                                            val,
+                                      )
+                                      .key;
                             });
                           },
                           hintText: 'Select',
                         ),
-                  
-                  _buildDateTile(
-                    'Planting Date',
-                    _plantingDate,
-                    () => _selectPlantingDate(context),
-                  ),
-                  
-                  if (_plantingDate != null && _selectedCropType != null && _cropHarvestDurations.containsKey(_selectedCropType))
-                    ListTile(
-                      title: const Text('Expected Maturity Date'),
-                      subtitle: Text(
-                        DateFormat('yyyy-MM-dd').format(_plantingDate!
-                            .add(Duration(days: _cropHarvestDurations[_selectedCropType]!))
-                            .toLocal()),
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      trailing: const Icon(Icons.info_outline),
+
+                    _buildDateTile(
+                      'Planting Date',
+                      _plantingDate,
+                      () => _selectPlantingDate(context),
                     ),
-                  const Divider(),
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: ElevatedButton(
-                      onPressed: (_userGardens.isEmpty || _selectedCropType == null || _plantingDate == null || _nameController.text.isEmpty) ? null : _savePlant,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: (_userGardens.isEmpty || _selectedCropType == null || _plantingDate == null || _nameController.text.isEmpty) ? Colors.grey : const Color.fromARGB(255, 34, 94, 36),
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(50),
+
+                    if (_plantingDate != null &&
+                        _selectedCropType != null &&
+                        _cropHarvestDurations.containsKey(_selectedCropType))
+                      ListTile(
+                        title: const Text('Expected Maturity Date'),
+                        subtitle: Text(
+                          DateFormat('yyyy-MM-dd').format(
+                            _plantingDate!
+                                .add(
+                                  Duration(
+                                    days:
+                                        _cropHarvestDurations[_selectedCropType]!,
+                                  ),
+                                )
+                                .toLocal(),
+                          ),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        trailing: const Icon(Icons.info_outline),
+                      ),
+                    const Divider(),
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: ElevatedButton(
+                        onPressed:
+                            (_userGardens.isEmpty ||
+                                    _selectedCropType == null ||
+                                    _plantingDate == null ||
+                                    _nameController.text.isEmpty)
+                                ? null
+                                : _savePlant,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              (_userGardens.isEmpty ||
+                                      _selectedCropType == null ||
+                                      _plantingDate == null ||
+                                      _nameController.text.isEmpty)
+                                  ? Colors.grey
+                                  : const Color.fromARGB(255, 34, 94, 36),
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(50),
+                          ),
+                        ),
+                        child: const Text(
+                          'Save',
+                          style: TextStyle(fontSize: 18),
                         ),
                       ),
-                      child: const Text('Save', style: TextStyle(fontSize: 18)),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
     );
   }
 }

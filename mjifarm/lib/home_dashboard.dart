@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:mjifarm/plantdetails.dart';
+import 'dart:convert';
 
 import 'package:mjifarm/weather.dart' show getTodayWeatherSummary, WeatherData;
 import 'package:mjifarm/reminder.dart';
@@ -202,7 +204,7 @@ class HomeDashboard extends StatelessWidget {
             ),
             const SizedBox(height: 5),
 
-            // 🌞 Tip of the Day
+            //  Tip of the Day
             FutureBuilder<DatabaseEvent>(
               future: FirebaseDatabase.instance.ref('tips/$todayDate').once(),
               builder: (context, snapshot) {
@@ -252,15 +254,27 @@ class HomeDashboard extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 15),
 
             SizedBox(
-              height: 90,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  _buildFarmCircle(context, icon: Icons.add, label: 'Add'),
-                ],
+              height: 100,
+              child: FutureBuilder<List<Widget>>(
+                future: _buildFarmPlantCircles(context),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final plantWidgets = snapshot.data ?? [];
+
+                  return ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      _buildFarmCircle(context, icon: Icons.add, label: 'Add'),
+                      const SizedBox(width: 10),
+                      ...plantWidgets,
+                    ],
+                  );
+                },
               ),
             ),
 
@@ -568,4 +582,83 @@ class HomeDashboard extends StatelessWidget {
       ),
     );
   }
+}
+
+Future<List<Widget>> _buildFarmPlantCircles(BuildContext context) async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return [];
+
+  final gardensRef = FirebaseDatabase.instance.ref('gardens');
+  final snapshot =
+      await gardensRef.orderByChild('userID').equalTo(user.uid).once();
+
+  if (snapshot.snapshot.value == null) return [];
+
+  final gardensMap = Map<String, dynamic>.from(snapshot.snapshot.value as Map);
+  final List<Map<String, dynamic>> allPlants = [];
+
+  gardensMap.forEach((gardenId, gardenData) {
+    final garden = Map<String, dynamic>.from(gardenData);
+    if (garden.containsKey('plants')) {
+      final plants = Map<String, dynamic>.from(garden['plants']);
+      plants.forEach((plantId, plantData) {
+        allPlants.add({
+          ...Map<String, dynamic>.from(plantData),
+          'gardenName': garden['name'] ?? 'Unknown',
+        });
+      });
+    }
+  });
+
+  return allPlants.map((plant) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (_) => PlantDetailsPage(
+                  name: plant['name'] ?? 'Unnamed Plant',
+                  imagePath:
+                      plant['imageBase64'] != null
+                          ? 'data:image/jpeg;base64,${plant['imageBase64']}'
+                          : 'assets/plant.png',
+                  growthStatus: 'View Details',
+                  growthPercentage: 0,
+                  harvestDate: plant['maturityDate'] ?? 'Unknown',
+                  gardenName: plant['gardenName'],
+                  container: plant['container'],
+                  category: plant['category'],
+                  plantingDate: plant['plantingDate'],
+                ),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(right: 10),
+        child: Column(
+          children: [
+            CircleAvatar(
+              radius: 30,
+              backgroundColor: Colors.green.shade200,
+              backgroundImage:
+                  plant['imageBase64'] != null
+                      ? MemoryImage(base64Decode(plant['imageBase64']))
+                      : const AssetImage('assets/plant.png') as ImageProvider,
+            ),
+            const SizedBox(height: 5),
+            SizedBox(
+              width: 60,
+              child: Text(
+                plant['name'] ?? '',
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }).toList();
 }
