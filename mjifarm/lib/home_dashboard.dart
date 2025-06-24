@@ -3,28 +3,25 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 
-import 'package:mjifarm/weather.dart' show getTodayWeatherSummary, WeatherData;
+// ONLY change this import for weather:
+import 'package:mjifarm/weather.dart'; // Import the entire weather.dart file
 import 'package:mjifarm/reminder.dart';
 import 'package:mjifarm/pests.dart';
 import 'package:mjifarm/plants.dart';
 import 'package:mjifarm/newplant.dart';
 import 'package:mjifarm/article.dart';
-import 'package:mjifarm/weather.dart';
 import 'package:mjifarm/farmer_features/expert_selection.dart';
 import 'package:mjifarm/auth_gate.dart';
-// Note: Removed expert_application_form.dart and expert_application_status_widget.dart
-// and auth_screen.dart and expert_dashboard_screen.dart imports as per "scratch all this changes" and
-// the provided StatelessWidget code. Re-add them if needed for other functionalities.
+import 'package:mjifarm/weather_page.dart'; // Import WeatherPage for navigation
 
 class HomeDashboard extends StatelessWidget {
   const HomeDashboard({
     super.key,
-  }); // Added const constructor for better practice
+  });
 
   @override
   Widget build(BuildContext context) {
     final String todayDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    final WeatherData weatherSummary = getTodayWeatherSummary();
 
     // Get the current user
     final User? currentUser = FirebaseAuth.instance.currentUser;
@@ -95,11 +92,7 @@ class HomeDashboard extends StatelessWidget {
                           const SizedBox(height: 8),
                           FutureBuilder<DatabaseEvent>(
                             future:
-                                FirebaseDatabase.instance
-                                    .ref(
-                                      'tasks/${FirebaseAuth.instance.currentUser?.uid}',
-                                    )
-                                    .once(),
+                                FirebaseDatabase.instance.ref('tasks/${FirebaseAuth.instance.currentUser?.uid}').once(),
                             builder: (context, snapshot) {
                               if (snapshot.connectionState ==
                                   ConnectionState.waiting) {
@@ -174,19 +167,37 @@ class HomeDashboard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 10),
-                // Weather Card
+                // Weather Card (CHANGED HERE)
                 Expanded(
                   child: GestureDetector(
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => WeatherPage()),
+                        MaterialPageRoute(builder: (_) => const WeatherPage()),
                       );
                     },
-                    child: _buildCard(
-                      'Weather',
-                      subtitle:
-                          '${weatherSummary.temperature}, ${weatherSummary.condition}',
+                    child: FutureBuilder<WeatherData>( // Use FutureBuilder
+                      future: getTodayWeatherSummary(), // Call the async function
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return _buildCard(
+                            'Weather',
+                            subtitle: 'Loading...',
+                          );
+                        } else if (snapshot.hasError) {
+                          return _buildCard(
+                            'Weather',
+                            subtitle: 'Error: ${snapshot.error}', // Display error
+                          );
+                        } else if (snapshot.hasData) {
+                          final weatherSummary = snapshot.data!;
+                          return _buildCard(
+                            'Weather',
+                            subtitle: '${weatherSummary.temperature}°C, ${weatherSummary.condition}',
+                          );
+                        }
+                        return _buildCard('Weather', subtitle: 'N/A'); // Fallback
+                      },
                     ),
                   ),
                 ),
@@ -197,7 +208,7 @@ class HomeDashboard extends StatelessWidget {
 
             // Use the userName variable here
             Text(
-              'Hello $userName,', // Changed from 'Hello Tracy,'
+              'Hello $userName,',
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 5),
@@ -446,15 +457,15 @@ class HomeDashboard extends StatelessWidget {
                   icon != null
                       ? Icon(icon, size: 30, color: Colors.black)
                       : image != null
-                      ? ClipOval(
-                        child: Image.asset(
-                          image!,
-                          fit: BoxFit.cover,
-                          height: 60,
-                          width: 60,
-                        ),
-                      )
-                      : null,
+                          ? ClipOval(
+                              child: Image.asset(
+                                image!,
+                                fit: BoxFit.cover,
+                                height: 60,
+                                width: 60,
+                              ),
+                            )
+                          : null,
             ),
             const SizedBox(height: 5),
             Text(label, style: const TextStyle(fontSize: 12)),
@@ -535,13 +546,13 @@ class HomeDashboard extends StatelessWidget {
             isEmpty
                 ? []
                 : [
-                  const BoxShadow(
-                    // Added const
-                    color: Colors.black12,
-                    blurRadius: 4,
-                    offset: Offset(0, 2),
-                  ),
-                ],
+                    const BoxShadow(
+                      // Added const
+                      color: Colors.black12,
+                      blurRadius: 4,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

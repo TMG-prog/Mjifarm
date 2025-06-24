@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:mjifarm/newplant.dart';
 import 'package:mjifarm/reminder.dart';
 import 'splash.dart';
@@ -9,6 +10,8 @@ import 'package:mjifarm/plants.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+ await dotenv.load(fileName: ".env");
+
   runApp(const MyApp());
 }
 
