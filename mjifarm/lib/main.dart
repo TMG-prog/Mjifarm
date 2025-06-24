@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:mjifarm/home.dart';
-import 'package:mjifarm/home_dashboard.dart';
 import 'package:mjifarm/newplant.dart';
 import 'package:mjifarm/reminder.dart';
 import 'splash.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'package:mjifarm/plants.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,6 +30,7 @@ class MyApp extends StatelessWidget {
       routes: {
        '/newplant':(context) => NewPlantPage(),
         '/reminder': (context) => ReminderPage(),
+        'myplants':(context) => MyPlantsPage()
       },
     );
   }

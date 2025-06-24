@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'auth_gate.dart';
-import 'Login.dart';
+
 
 class LandingPage extends StatelessWidget {
   const LandingPage({super.key});
@@ -57,25 +57,11 @@ class LandingPage extends StatelessWidget {
                     MaterialPageRoute(builder: (_) => AuthGate()),
                   );
                 },
-                child: const Text('Sign Up For Free'),
+                child: const Text('Sign Up / Log In'),
               ),
-            ),
+            )
 
-            const SizedBox(height: 20),
-
-            // Login Button
-            TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => LoginPage()),
-                );
-              },
-              child: const Text(
-                'Already have an account? Login',
-                style: TextStyle(color: Colors.black, fontSize: 16),
-              ),
-            ),
+          
           ],
         ),
       ),

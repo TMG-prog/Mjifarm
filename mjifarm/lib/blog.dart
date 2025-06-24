@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:mjifarm/article.dart';
-import 'article.dart'; // Make sure this file exists and is imported
+// Make sure this file exists and is imported
 
 class BlogPage extends StatefulWidget {
   const BlogPage({super.key});

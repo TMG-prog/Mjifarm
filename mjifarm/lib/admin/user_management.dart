@@ -186,7 +186,7 @@ class _UserManagementContentState extends State<UserManagementContent> {
                   columnSpacing: 16.0,
                   dataRowMinHeight: 48,
                   dataRowMaxHeight: 60,
-                  headingRowColor: MaterialStateProperty.all(Colors.grey.shade50),
+                  headingRowColor: WidgetStateProperty.all(Colors.grey.shade50),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: Colors.grey.shade200),

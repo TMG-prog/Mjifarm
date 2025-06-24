@@ -1,8 +1,7 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:typed_data'; // For Uint8List
+// For Uint8List
 import 'package:flutter/material.dart'; // Needed for SnackBar
 import 'package:geolocator/geolocator.dart'; // REQUIRED: Import geolocator for location
 

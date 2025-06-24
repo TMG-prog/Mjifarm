@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_database/firebase_database.dart'; // Needed for DatabaseReference and ServerValue
-// import 'package:uuid/uuid.dart'; // No longer needed as we use Firebase Auth UID as primary key
-import 'package:firebase_auth/firebase_auth.dart'; // Needed for FirebaseAuth
+import 'package:firebase_database/firebase_database.dart'; // Needed for DatabaseReference
+import 'package:firebase_auth/firebase_auth.dart'; // Needed for FirebaseAuth (e.g., for isAdmin check in rules)
 
 class ExpertManagementContent extends StatefulWidget {
   const ExpertManagementContent({super.key});
@@ -12,31 +11,24 @@ class ExpertManagementContent extends StatefulWidget {
 
 class _ExpertManagementContentState extends State<ExpertManagementContent> {
   late DatabaseReference _expertsRef;
-  late DatabaseReference _usersRef; 
+  late DatabaseReference _usersRef; // Reference to the 'users' node for updating isExpert
   List<Map<String, dynamic>> _experts = [];
   bool _isLoading = true;
-  final _formKey = GlobalKey<FormState>();
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _expertiseAreaController = TextEditingController();
-  final TextEditingController _contactHandleController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController(); // Password Controller
+
+  // Removed: TextEditingControllers for name, expertiseArea, contactHandle, email, password
+  // Removed: _formKey
 
   @override
   void initState() {
     super.initState();
     _expertsRef = FirebaseDatabase.instance.ref('expert_profiles');
-    _usersRef = FirebaseDatabase.instance.ref('users'); 
+    _usersRef = FirebaseDatabase.instance.ref('users'); // Initialize users ref
     _listenToExperts();
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _expertiseAreaController.dispose();
-    _contactHandleController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose(); 
+    // Removed: Disposal of all TextEditingControllers
     super.dispose();
   }
 
@@ -47,15 +39,15 @@ class _ExpertManagementContentState extends State<ExpertManagementContent> {
         final List<Map<String, dynamic>> fetchedExperts = [];
         data.forEach((key, value) {
           if (value is Map) {
-            // 'key' here will now be the Firebase Auth UID directly
+            // 'key' here is the Firebase Auth UID
             fetchedExperts.add({
-              'id': key, // This 'id' is now the Firebase Auth UID
-              'userID': value['userID'] ?? key, // Fallback to key if userID is not explicitly stored/needed
+              'id': key, // This 'id' is the Firebase Auth UID
+              'userID': value['userID'] ?? key, 
               'name': value['name'] ?? '',
               'expertiseArea': value['expertiseArea'] ?? '',
               'contactHandle': value['contactHandle'] ?? '',
-              'isVerified': value['isVerified'] ?? false,
-              'email': value['email'] ?? '', 
+              'isVerified': value['isVerified'] ?? false, // Expert profile verification status
+              'email': value['email'] ?? '',
             });
           }
         });
@@ -100,8 +92,12 @@ class _ExpertManagementContentState extends State<ExpertManagementContent> {
             ElevatedButton(
               onPressed: () async {
                 try {
-                  // Use expertAuthUid as the key for updating
+                  // Update 'isVerified' in expert_profiles
                   await _expertsRef.child(expertAuthUid).update({'isVerified': !currentVerifiedStatus}); 
+
+                  // Update 'isExpert' flag in 'users' node based on verification status
+                  await _usersRef.child(expertAuthUid).update({'isExpert': !currentVerifiedStatus});
+
                   _showSnackBar('Expert verification status toggled.', Colors.green);
                 } catch (e) {
                   _showSnackBar('Failed to update verification: $e', Colors.red);
@@ -125,7 +121,7 @@ class _ExpertManagementContentState extends State<ExpertManagementContent> {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
           title: const Text('Confirm Deletion'),
-          content: const Text('Are you sure you want to delete this expert? This will remove their profile and associated user data.'),
+          content: const Text('Are you sure you want to delete this expert? This will remove their profile and user role.'),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -137,13 +133,20 @@ class _ExpertManagementContentState extends State<ExpertManagementContent> {
                   // 1. Delete expert profile from 'expert_profiles' node using Auth UID as key
                   await _expertsRef.child(expertAuthUid).remove();
 
-                  // 2. Delete corresponding user entry from 'users' node using the AUTH UID
-                  // Remember: Deleting a Firebase Auth user account itself from the client
-                  // is generally not recommended or requires re-authentication.
-                  // For a robust solution, consider using a Firebase Cloud Function.
-                  await _usersRef.child(expertAuthUid).remove(); 
-                  
-                  _showSnackBar('Expert profile and Realtime DB user data deleted.', Colors.green);
+                  // 2. Remove 'isExpert' flag from 'users' node
+                  // Using update with null value removes the field
+                  await _usersRef.child(expertAuthUid).update({'isExpert': null}); 
+
+                  // Optional: If you also want to remove 'expert' from the userRole list (if it was ever added there)
+                  // You'd need to fetch, modify list, and then update.
+                  // For now, assuming isExpert is the primary flag.
+
+                  // 3. (Consideration) Delete corresponding Firebase Auth user:
+                  // This operation requires Firebase Admin SDK or specific client-side re-authentication.
+                  // For a robust solution, consider a Firebase Cloud Function for user deletion.
+                  // Deleting only the RTDB nodes here.
+
+                  _showSnackBar('Expert profile and Realtime DB user data updated (isExpert removed).', Colors.green);
                 } catch (e) {
                   _showSnackBar('Failed to delete expert: $e', Colors.red);
                   print("Error deleting expert: $e");
@@ -160,71 +163,7 @@ class _ExpertManagementContentState extends State<ExpertManagementContent> {
     );
   }
 
-  void _handleAddExpert() async {
-    if (_formKey.currentState!.validate()) {
-      try {
-        final String name = _nameController.text.trim();
-        final String email = _emailController.text.trim();
-        final String password = _passwordController.text;
-        final String expertiseArea = _expertiseAreaController.text.trim();
-        final String contactHandle = _contactHandleController.text.trim();
-
-        if (password.isEmpty || password.length < 6) {
-          _showSnackBar('Password must be at least 6 characters long.', Colors.red);
-          return;
-        }
-
-        // 1. Create user in Firebase Authentication
-        UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
-        String newExpertAuthUid = userCredential.user!.uid; // Get the UID from Firebase Auth
-
-        // 2. Save expert profile to Realtime Database's 'expert_profiles' node
-        //    CRITICAL CHANGE: Use the Firebase Auth UID as the key for the expert_profiles entry
-        await _expertsRef.child(newExpertAuthUid).set({ 
-          'userID': newExpertAuthUid, // Keep for clarity, or remove if key is always UID
-          'name': name,
-          'email': email,
-          'expertiseArea': expertiseArea,
-          'contactHandle': contactHandle,
-          'isVerified': false, 
-        });
-
-        // 3. Save user data (including role) to Realtime Database's 'users' node
-        await _usersRef.child(newExpertAuthUid).set({
-          'email': email,
-          'name': name,
-          'userRole': ['expert'], 
-          'status': 'active', 
-          'registrationDate': ServerValue.timestamp, 
-        });
-
-        _nameController.clear();
-        _expertiseAreaController.clear();
-        _contactHandleController.clear();
-        _emailController.clear();
-        _passwordController.clear();
-        _showSnackBar('Expert $name added successfully! They can now log in.', Colors.green);
-
-      } on FirebaseAuthException catch (e) {
-        String message;
-        if (e.code == 'weak-password') {
-          message = 'The password provided is too weak.';
-        } else if (e.code == 'email-already-in-use') {
-          message = 'The account already exists for that email.';
-        } else {
-          message = 'Firebase Auth Error: ${e.message}';
-        }
-        _showSnackBar(message, Colors.red);
-        print('Firebase Auth Error: ${e.code} - ${e.message}');
-      } catch (e) {
-        _showSnackBar('Failed to add expert: $e', Colors.red);
-        print("General Error adding expert: $e");
-      }
-    }
-  }
+  // Removed: _handleAddExpert method entirely.
 
   @override
   Widget build(BuildContext context) {
@@ -244,120 +183,9 @@ class _ExpertManagementContentState extends State<ExpertManagementContent> {
                 ),
           ),
           const SizedBox(height: 24),
-          Card(
-            elevation: 2,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Add New Expert',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, color: Colors.grey.shade800),
-                  ),
-                  const SizedBox(height: 16),
-                  Form(
-                    key: _formKey,
-                    child: Column(
-                      children: [
-                        TextFormField(
-                          controller: _nameController,
-                          decoration: InputDecoration(
-                            labelText: 'Expert Name',
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                            focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2), borderRadius: BorderRadius.circular(10)),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter expert name';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _expertiseAreaController,
-                          decoration: InputDecoration(
-                            labelText: 'Expertise Area (e.g., Pest Control)',
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                            focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2), borderRadius: BorderRadius.circular(10)),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter expertise area';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _contactHandleController,
-                          decoration: InputDecoration(
-                            labelText: 'Contact Handle (e.g., @agri_expert)',
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                            focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2), borderRadius: BorderRadius.circular(10)),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _emailController,
-                          decoration: InputDecoration(
-                            labelText: 'Email',
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                            focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2), borderRadius: BorderRadius.circular(10)),
-                          ),
-                          keyboardType: TextInputType.emailAddress,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter email';
-                            }
-                            if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
-                              return 'Please enter a valid email';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField( 
-                          controller: _passwordController,
-                          decoration: InputDecoration(
-                            labelText: 'Initial Password (min 6 characters)',
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                            focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2), borderRadius: BorderRadius.circular(10)),
-                          ),
-                          obscureText: true,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter a password';
-                            }
-                            if (value.length < 6) {
-                              return 'Password must be at least 6 characters';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton.icon(
-                          onPressed: _handleAddExpert,
-                          icon: const Icon(Icons.add_circle),
-                          label: const Text('Add Expert'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(context).primaryColor,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 32),
+          // Removed: The entire Card containing the "Add New Expert" form.
+          // This includes the Form, TextFormFields, and the Add Expert button.
+          
           Card(
             elevation: 2,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -369,7 +197,7 @@ class _ExpertManagementContentState extends State<ExpertManagementContent> {
                   columnSpacing: 16.0,
                   dataRowMinHeight: 48,
                   dataRowMaxHeight: 60,
-                  headingRowColor: MaterialStateProperty.all(Colors.grey.shade50),
+                  headingRowColor: WidgetStateProperty.all(Colors.grey.shade50),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: Colors.grey.shade200),
@@ -399,13 +227,11 @@ class _ExpertManagementContentState extends State<ExpertManagementContent> {
                           IconButton(
                             icon: Icon(expert['isVerified'] == true ? Icons.check_circle : Icons.circle_outlined, color: expert['isVerified'] == true ? Colors.green : Colors.grey),
                             tooltip: expert['isVerified'] == true ? 'Unverify Expert' : 'Verify Expert',
-                            // Pass the Firebase Auth UID (which is now 'id' for this expert profile)
                             onPressed: () => _handleVerify(expert['id'], expert['isVerified'] == true), 
                           ),
                           IconButton(
                             icon: const Icon(Icons.delete, color: Colors.red),
                             tooltip: 'Delete Expert',
-                            // Pass the Firebase Auth UID (which is now 'id' for this expert profile)
                             onPressed: () => _handleDelete(expert['id']), 
                           ),
                         ],

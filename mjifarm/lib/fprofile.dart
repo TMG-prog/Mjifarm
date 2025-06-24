@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 class FarmerProfilePage extends StatefulWidget {
+  const FarmerProfilePage({super.key});
+
   @override
   _FarmerProfilePageState createState() => _FarmerProfilePageState();
 }

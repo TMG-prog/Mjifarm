@@ -297,7 +297,7 @@ Future<String?> _pickImage(ImageSource source) async {
                             style: const TextStyle(fontSize: 16, color: Colors.black87),
                             textAlign: TextAlign.start,
                           ),
-                        )).toList(),
+                        )),
                   ],
                 ),
               ),

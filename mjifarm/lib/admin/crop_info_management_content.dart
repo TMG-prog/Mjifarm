@@ -17,11 +17,11 @@ class _CropInfoManagementContentState extends State<CropInfoManagementContent> {
   bool _isLoading = true;
   final _formKey = GlobalKey<FormState>();
 
-  TextEditingController _commonNameController = TextEditingController();
-  TextEditingController _scientificNameController = TextEditingController();
-  TextEditingController _plantingGuideController = TextEditingController();
-  TextEditingController _harvestDurationDaysController = TextEditingController();
-  TextEditingController _imageBase64Controller = TextEditingController(); // This will hold the Base64 string
+  final TextEditingController _commonNameController = TextEditingController();
+  final TextEditingController _scientificNameController = TextEditingController();
+  final TextEditingController _plantingGuideController = TextEditingController();
+  final TextEditingController _harvestDurationDaysController = TextEditingController();
+  final TextEditingController _imageBase64Controller = TextEditingController(); // This will hold the Base64 string
 
   Map<String, dynamic>? _currentCrop; // For editing existing crop info
 
@@ -120,7 +120,7 @@ class _CropInfoManagementContentState extends State<CropInfoManagementContent> {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
           title: const Text('Confirm Deletion'),
-          content: Text('Are you sure you want to delete crop: ${cropId}?'),
+          content: Text('Are you sure you want to delete crop: $cropId?'),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -407,7 +407,7 @@ class _CropInfoManagementContentState extends State<CropInfoManagementContent> {
                   columnSpacing: 16.0,
                   dataRowMinHeight: 70,
                   dataRowMaxHeight: 90,
-                  headingRowColor: MaterialStateProperty.all(Colors.grey.shade50),
+                  headingRowColor: WidgetStateProperty.all(Colors.grey.shade50),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: Colors.grey.shade200),

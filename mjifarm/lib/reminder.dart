@@ -92,7 +92,7 @@ class _ReminderPageState extends State<ReminderPage> {
 
   // Add or update a task in Firebase
   void _addOrEditTask({Task? task}) {
-    final _formKey = GlobalKey<FormState>();
+    final formKey = GlobalKey<FormState>();
     String title = task?.title ?? '';
     String description = task?.description ?? '';
     DateTime dueDate = task?.dueDate ?? _selectedDay ?? DateTime.now();
@@ -103,7 +103,7 @@ class _ReminderPageState extends State<ReminderPage> {
           (context) => AlertDialog(
             title: Text(task == null ? "Add Task" : "Edit Task"),
             content: Form(
-              key: _formKey,
+              key: formKey,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -145,8 +145,8 @@ class _ReminderPageState extends State<ReminderPage> {
               ElevatedButton(
                 child: Text(task == null ? "Add" : "Update"),
                 onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    _formKey.currentState!.save();
+                  if (formKey.currentState!.validate()) {
+                    formKey.currentState!.save();
                     final newTask = Task(
                       id: task?.id ?? Random().nextInt(1000000).toString(),
                       title: title,

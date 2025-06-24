@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import "../expert_features/expert_chat_list.dart"; // Import the chat list screen
-
+import 'package:mjifarm/auth_gate.dart';
 class ExpertDashboardScreen extends StatefulWidget {
   const ExpertDashboardScreen({super.key});
 
@@ -69,11 +69,16 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Expert Dashboard'),
+        
         actions: [
           IconButton(
+            //sign out button
             icon: const Icon(Icons.logout),
             onPressed: () async {
               await FirebaseAuth.instance.signOut();
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (context) => const AuthGate()),
+              );
             },
           ),
         ],
@@ -212,7 +217,7 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
                   Icons.person,
                   Colors.blue,
                   () {
-                    // TODO: Navigate to ExpertProfileScreen
+                    
                   },
                 ),
                 _buildExpertCard(

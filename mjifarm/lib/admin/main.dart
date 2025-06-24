@@ -2,15 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'dart:convert'; // Ensure this is imported!
+import 'dart:convert';
 import 'package:uuid/uuid.dart';
 
-// Import the new screen files
+// Import the existing screen files
 import 'dashboard_content.dart';
 import 'user_management.dart';
-import 'expert_management.dart';
+import 'expert_management.dart'; // This is for approved experts
 import 'crop_info_management_content.dart';
 import 'diagnosis_review.dart';
+
+import 'expert_application_screen.dart';
 
 // Global Firebase configuration variables (provided by the environment)
 final String? __app_id = null; // Placeholder for Canvas environment
@@ -22,7 +24,6 @@ Future<void> _initializeFirebase() async {
   try {
     Map<String, dynamic> firebaseConfig = {};
     if (__firebase_config != null) {
-      // Corrected line: Use json.decode directly
       firebaseConfig = Map<String, dynamic>.from(json.decode(__firebase_config!));
     }
 
@@ -73,7 +74,7 @@ class AdminApp extends StatelessWidget {
           foregroundColor: Colors.white,
           elevation: 0,
         ),
-        cardTheme: CardThemeData( // Corrected earlier: CardThemeData
+        cardTheme: CardThemeData(
           elevation: 4,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         ),
@@ -213,12 +214,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       );
     }
 
-    final List<Widget> _widgetOptions = <Widget>[
+    // List of screens for navigation
+    final List<Widget> widgetOptions = <Widget>[
       DashboardContent(),
       UserManagementContent(),
       ExpertManagementContent(),
       CropInfoManagementContent(),
       DiagnosisReviewContent(),
+      AdminExpertApplicationsScreen(), // NEW: Add the Expert Applications screen here
     ];
 
     return Scaffold(
@@ -271,6 +274,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   selectedIcon: Icon(Icons.monitor_heart),
                   label: Text('Diagnoses'),
                 ),
+                // NEW: Add destination for Expert Applications
+                NavigationRailDestination(
+                  icon: Icon(Icons.how_to_reg_outlined), // Or Icons.assignment_ind_outlined, Icons.gavel_outlined
+                  selectedIcon: Icon(Icons.how_to_reg),
+                  label: Text('Applications'), // Label for the new section
+                ),
               ],
               selectedIndex: _selectedIndex,
               onDestinationSelected: _onItemTapped,
@@ -287,7 +296,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               labelType: NavigationRailLabelType.all,
             ),
           Expanded(
-            child: _widgetOptions.elementAt(_selectedIndex),
+            child: widgetOptions.elementAt(_selectedIndex),
           ),
         ],
       ),
@@ -313,6 +322,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 BottomNavigationBarItem(
                   icon: Icon(Icons.monitor_heart),
                   label: 'Diagnoses',
+                ),
+                // NEW: Add item for Expert Applications
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.how_to_reg),
+                  label: 'Applications',
                 ),
               ],
               currentIndex: _selectedIndex,

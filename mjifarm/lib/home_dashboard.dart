@@ -11,12 +11,25 @@ import 'package:mjifarm/newplant.dart';
 import 'package:mjifarm/article.dart';
 import 'package:mjifarm/weather.dart';
 import 'package:mjifarm/farmer_features/expert_selection.dart';
+import 'package:mjifarm/auth_gate.dart';
+// Note: Removed expert_application_form.dart and expert_application_status_widget.dart
+// and auth_screen.dart and expert_dashboard_screen.dart imports as per "scratch all this changes" and
+// the provided StatelessWidget code. Re-add them if needed for other functionalities.
 
 class HomeDashboard extends StatelessWidget {
+  const HomeDashboard({
+    super.key,
+  }); // Added const constructor for better practice
+
   @override
   Widget build(BuildContext context) {
     final String todayDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
     final WeatherData weatherSummary = getTodayWeatherSummary();
+
+    // Get the current user
+    final User? currentUser = FirebaseAuth.instance.currentUser;
+    // Get the user's display name, or default to 'Farmer' if not available
+    final String userName = currentUser?.displayName ?? 'Farmer';
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -24,11 +37,22 @@ class HomeDashboard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            //  Search bar
+            IconButton(
+              //sign out button
+              icon: const Icon(Icons.logout),
+              onPressed: () async {
+                await FirebaseAuth.instance.signOut();
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (context) => const AuthGate()),
+                );
+              },
+            ),
+
+            // Search bar
             TextField(
               decoration: InputDecoration(
                 hintText: 'Search',
-                prefixIcon: Icon(Icons.search),
+                prefixIcon: const Icon(Icons.search), // Added const
                 filled: true,
                 fillColor: Colors.grey.shade200,
                 border: OutlineInputBorder(
@@ -39,7 +63,7 @@ class HomeDashboard extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            //  Tasks and Weather cards
+            // Tasks and Weather cards
             Row(
               children: [
                 // Today’s Tasks Card
@@ -171,9 +195,10 @@ class HomeDashboard extends StatelessWidget {
 
             const SizedBox(height: 25),
 
-            const Text(
-              'Hello Tracy,',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            // Use the userName variable here
+            Text(
+              'Hello $userName,', // Changed from 'Hello Tracy,'
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 5),
 
@@ -208,7 +233,7 @@ class HomeDashboard extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            //  In the Farm Section
+            // In the Farm Section
             GestureDetector(
               onTap: () {
                 Navigator.push(
@@ -241,7 +266,7 @@ class HomeDashboard extends StatelessWidget {
 
             const SizedBox(height: 25),
 
-            //  Trending Articles
+            // Trending Articles
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: const [
@@ -301,7 +326,7 @@ class HomeDashboard extends StatelessWidget {
 
             const SizedBox(height: 30),
 
-            //  Contact Expert +  Pest Alerts
+            // Contact Expert + Pest Alerts
             Row(
               children: [
                 Expanded(
@@ -367,7 +392,7 @@ class HomeDashboard extends StatelessWidget {
     );
   }
 
-  //  Card Widget with optional subtitle
+  // Card Widget with optional subtitle
   static Widget _buildCard(String title, {String? subtitle}) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -394,7 +419,7 @@ class HomeDashboard extends StatelessWidget {
     );
   }
 
-  //  Circular farm action (add/view)
+  // Circular farm action (add/view)
   static Widget _buildFarmCircle(
     BuildContext context, {
     IconData? icon,
@@ -439,7 +464,7 @@ class HomeDashboard extends StatelessWidget {
     );
   }
 
-  //  Trending Article Card
+  // Trending Article Card
   static Widget _buildTrendingCardFromArticle(
     BuildContext context,
     Map<String, dynamic> article,
@@ -495,7 +520,7 @@ class HomeDashboard extends StatelessWidget {
     );
   }
 
-  //  Tip box
+  // Tip box
   Widget _buildTipBox(String tip, {bool isEmpty = false}) {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -510,7 +535,8 @@ class HomeDashboard extends StatelessWidget {
             isEmpty
                 ? []
                 : [
-                  BoxShadow(
+                  const BoxShadow(
+                    // Added const
                     color: Colors.black12,
                     blurRadius: 4,
                     offset: Offset(0, 2),

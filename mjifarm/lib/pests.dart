@@ -59,6 +59,8 @@ class PestAlertsPage extends StatelessWidget {
     ),
   ];
 
+   PestAlertsPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

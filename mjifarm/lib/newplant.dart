@@ -9,6 +9,8 @@ import 'package:intl/intl.dart';
 import 'plants.dart'; // Assuming this file defines your Plant model if used elsewhere
 
 class NewPlantPage extends StatefulWidget {
+  const NewPlantPage({super.key});
+
   @override
   _NewPlantPageState createState() => _NewPlantPageState();
 }
@@ -201,7 +203,7 @@ class _NewPlantPageState extends State<NewPlantPage> {
         'gardenName': _selectedGardenName,
         'gardenId': _selectedGardenId,
         'plantingDate': _plantingDate!.toIso8601String(),
-        'maturityDate': calculatedMaturityDate!.toIso8601String(),
+        'maturityDate': calculatedMaturityDate.toIso8601String(),
         'userID': _currentUser!.uid,
         'timestamp': ServerValue.timestamp,
         'imageBase64': _currentCropImageBase64, // Use the image from the selected crop
