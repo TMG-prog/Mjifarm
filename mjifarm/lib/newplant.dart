@@ -334,8 +334,12 @@ class _NewPlantPageState extends State<NewPlantPage> {
             actions: [
               TextButton(
                 onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.pushReplacementNamed(context, '/myplants');
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => MyPlantsPage(),
+                    ), // This is a direct route, not a named route
+                  );
                 },
                 child: const Text('OK'),
               ),
