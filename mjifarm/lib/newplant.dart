@@ -334,6 +334,8 @@ class _NewPlantPageState extends State<NewPlantPage> {
             actions: [
               TextButton(
                 onPressed: () {
+                  Navigator.pop(context); // Close the dialog
+                  
                   Navigator.push(
                     context,
                     MaterialPageRoute(

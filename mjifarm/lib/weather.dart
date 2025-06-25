@@ -1,33 +1,40 @@
+// lib/weather.dart
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:geolocator/geolocator.dart'; // For location
-import 'package:flutter_dotenv/flutter_dotenv.dart'; // For API key
-import 'dart:math'; // For max/min in forecast calculations
+import 'package:geolocator/geolocator.dart';
+import 'dart:math';
 
 // --- Data Models ---
-// This is the simple WeatherData class that can be used for summary
+// This class holds simplified weather information for display.
 class WeatherData {
   final String temperature;
   final String condition;
-  final String? iconCode; // Add icon code to fetch dynamically
+  final String? iconCode; // OpenWeatherMap icon code (e.g., "01d", "04n")
 
   WeatherData({required this.temperature, required this.condition, this.iconCode});
 }
 
-// --- API Service Functions ---
+// --- API Service Configuration ---
 
-final String _apiKey ="f02473df10e149ec8cc641bf061fd484";
-final String _baseUrl = 'https://api.openweathermap.org/data/2.5';
+// The base URL for your Vercel Serverless Function.
+// Replace 'YOUR_VERCEL_API_PROJECT_NAME' with the actual
+// name of the Vercel project deployed for the weather API.
+// The '/api' path is based on your Vercel project structure (api/index.js).
+const String _vercelApiBaseUrl = 'https://mjifarms-weather.vercel.app/api';
 
-/// Determines the current position of the device.
-/// Throws an error if location services are disabled or permissions are denied.
+// --- Location Service Function ---
+
+/// Determines the current position (latitude and longitude) of the device.
+/// This function handles permissions and ensures location services are enabled.
 Future<Position> _determinePosition() async {
   bool serviceEnabled;
   LocationPermission permission;
 
+  // Test if location services are enabled.
   serviceEnabled = await Geolocator.isLocationServiceEnabled();
   if (!serviceEnabled) {
+    // Location services are not enabled; don't continue.
     return Future.error('Location services are disabled.');
   }
 
@@ -35,72 +42,95 @@ Future<Position> _determinePosition() async {
   if (permission == LocationPermission.denied) {
     permission = await Geolocator.requestPermission();
     if (permission == LocationPermission.denied) {
+      // Permissions are denied.
       return Future.error('Location permissions are denied');
     }
   }
 
   if (permission == LocationPermission.deniedForever) {
+    // Permissions are denied forever.
     return Future.error(
         'Location permissions are permanently denied, we cannot request permissions.');
   }
 
+  // Permissions are granted, continue accessing the position of the device.
   return await Geolocator.getCurrentPosition();
 }
 
-/// Fetches current weather data from OpenWeatherMap.
-/// Returns a Map<String, dynamic> of the raw JSON response.
+// --- API Fetching Functions (via Vercel Serverless Function) ---
+
+/// Fetches current weather data for the device's current location
+/// by calling the Vercel Serverless Function.
+///
+/// Returns a Map<String, dynamic> representing the JSON response from OpenWeatherMap.
 Future<Map<String, dynamic>> fetchCurrentWeatherData() async {
-  if (_apiKey.isEmpty) {
-    throw Exception("OpenWeatherMap API key is not configured.");
-  }
-
   try {
-    Position position = await _determinePosition();
+    Position position = await _determinePosition(); // Get current location
     final lat = position.latitude;
     final lon = position.longitude;
 
-    final weatherUrl = Uri.parse('$_baseUrl/weather?lat=$lat&lon=$lon&appid=$_apiKey&units=metric');
-    final weatherResponse = await http.get(weatherUrl);
+    // Construct the URL to call the Vercel Serverless Function
+    // Pass latitude, longitude, and 'weather' type as query parameters.
+    final vercelUrl = Uri.parse('$_vercelApiBaseUrl?lat=$lat&lon=$lon&type=weather');
+    // print('Calling Vercel API for current weather: $vercelUrl'); // Debugging print
 
-    if (weatherResponse.statusCode == 200) {
-      return json.decode(weatherResponse.body);
+    final response = await http.get(vercelUrl);
+
+    if (response.statusCode == 200) {
+      // If the server returns a 200 OK response, parse the JSON.
+      return json.decode(response.body);
     } else {
-      throw Exception('Failed to load current weather: ${weatherResponse.statusCode} ${weatherResponse.body}');
+      // If the server returns an error, throw an exception.
+      final errorBody = json.decode(response.body);
+      // print('Error fetching current weather from Vercel function: ${response.statusCode} - ${errorBody['error'] ?? response.body}'); // Debugging print
+      throw Exception('Failed to load current weather from Vercel function: ${response.statusCode} ${errorBody['error'] ?? response.body}');
     }
   } catch (e) {
-    print('Error in fetchCurrentWeatherData: $e');
-    rethrow; // Re-throw to be caught by FutureBuilder
+    // Catch any exceptions during the process (e.g., network error, permission error).
+    // print('Exception in fetchCurrentWeatherData (via Vercel): $e'); // Debugging print
+    rethrow; // Re-throw the exception so calling widgets can handle it.
   }
 }
 
-/// Fetches 5-day / 3-hour forecast data from OpenWeatherMap.
-/// Returns a Map<String, dynamic> of the raw JSON response.
+/// Fetches 5-day / 3-hour forecast data for the device's current location
+/// by calling the Vercel Serverless Function.
+///
+/// Returns a Map<String, dynamic> representing the JSON response from OpenWeatherMap.
 Future<Map<String, dynamic>> fetchForecastData() async {
-  if (_apiKey.isEmpty) {
-    throw Exception("OpenWeatherMap API key is not configured.");
-  }
-
   try {
-    Position position = await _determinePosition();
+    Position position = await _determinePosition(); // Get current location
     final lat = position.latitude;
     final lon = position.longitude;
 
-    final forecastUrl = Uri.parse('$_baseUrl/forecast?lat=$lat&lon=$lon&appid=$_apiKey&units=metric');
-    final forecastResponse = await http.get(forecastUrl);
+    // Construct the URL to call the Vercel Serverless Function
+    // Pass latitude, longitude, and 'forecast' type as query parameters.
+    final vercelUrl = Uri.parse('$_vercelApiBaseUrl?lat=$lat&lon=$lon&type=forecast');
+    // print('Calling Vercel API for forecast: $vercelUrl'); // Debugging print
 
-    if (forecastResponse.statusCode == 200) {
-      return json.decode(forecastResponse.body);
+    final response = await http.get(vercelUrl);
+
+    if (response.statusCode == 200) {
+      // If the server returns a 200 OK response, parse the JSON.
+      return json.decode(response.body);
     } else {
-      throw Exception('Failed to load forecast: ${forecastResponse.statusCode} ${forecastResponse.body}');
+      // If the server returns an error, throw an exception.
+      final errorBody = json.decode(response.body);
+      // print('Error fetching forecast from Vercel function: ${response.statusCode} - ${errorBody['error'] ?? response.body}'); // Debugging print
+      throw Exception('Failed to load forecast from Vercel function: ${response.statusCode} ${errorBody['error'] ?? response.body}');
     }
   } catch (e) {
-    print('Error in fetchForecastData: $e');
-    rethrow; // Re-throw to be caught by FutureBuilder
+    // Catch any exceptions during the process.
+    // print('Exception in fetchForecastData (via Vercel): $e'); // Debugging print
+    rethrow;
   }
 }
 
-/// Helper to get a simplified weather summary for a specific day.
-/// This is what getTodayWeatherSummary will now wrap.
+// --- Weather Data Processing and UI Helpers ---
+
+/// Extracts and simplifies current weather data from the OpenWeatherMap JSON response.
+///
+/// [weatherData]: The JSON response map for current weather.
+/// Returns a [WeatherData] object.
 WeatherData getSimplifiedDailyWeatherSummary(Map<String, dynamic> weatherData) {
   final temp = (weatherData['main']?['temp'] as num?)?.round()?.toString() ?? 'N/A';
   final condition = weatherData['weather']?[0]?['description'] ?? 'N/A';
@@ -108,33 +138,41 @@ WeatherData getSimplifiedDailyWeatherSummary(Map<String, dynamic> weatherData) {
   return WeatherData(temperature: temp, condition: condition, iconCode: iconCode);
 }
 
-// The original `getTodayWeatherSummary` should now call the new fetch function.
-// This function will be used by HomeDashboard.
+/// A convenience function to get today's weather summary directly.
+/// Handles potential errors and returns a default [WeatherData] in case of failure.
 Future<WeatherData> getTodayWeatherSummary() async {
   try {
     final weatherJson = await fetchCurrentWeatherData();
     return getSimplifiedDailyWeatherSummary(weatherJson);
   } catch (e) {
-    // Return a default or error state WeatherData
-    return WeatherData(temperature: 'N/A', condition: 'Error', iconCode: '01d'); // Default sunny icon
+    // print('Failed to get today\'s weather summary: $e'); // Debugging print
+    // Return a default error state
+    return WeatherData(temperature: 'N/A', condition: 'Error', iconCode: '01d');
   }
 }
 
-// Helper to get an icon based on weather condition string
+/// Provides a suitable Material Design icon based on weather condition text.
+///
+/// [condition]: A string describing the weather (e.g., "clear sky", "cloudy").
+/// Returns an [Icon] widget.
 Icon getWeatherIconWidget(String condition) {
   if (condition.toLowerCase().contains('clear') || condition.toLowerCase().contains('sunny')) {
     return Icon(Icons.wb_sunny, color: Colors.orange.shade300);
   } else if (condition.toLowerCase().contains('cloud')) {
     return Icon(Icons.cloud, color: Colors.grey.shade500);
-  } else if (condition.toLowerCase().contains('rain')) {
+  } else if (condition.toLowerCase().contains('rain') || condition.toLowerCase().contains('drizzle')) {
     return Icon(Icons.cloudy_snowing, color: Colors.blue.shade500);
   } else if (condition.toLowerCase().contains('storm') || condition.toLowerCase().contains('thunder')) {
     return Icon(Icons.thunderstorm, color: Colors.indigo.shade500);
+  } else if (condition.toLowerCase().contains('snow')) {
+    return Icon(Icons.ac_unit, color: Colors.blue.shade200);
+  } else if (condition.toLowerCase().contains('mist') || condition.toLowerCase().contains('fog') || condition.toLowerCase().contains('haze')) {
+    return Icon(Icons.dehaze, color: Colors.grey.shade400);
   }
-  return Icon(Icons.cloud_queue, color: Colors.grey); // Default
+  return Icon(Icons.cloud_queue, color: Colors.grey); // Default icon
 }
 
-// Helper to get a weekday string
+/// Converts a weekday integer (1=Mon, 7=Sun) to a short string.
 String getWeekday(int weekday) {
   switch (weekday) {
     case 1: return 'Mon';
@@ -144,6 +182,6 @@ String getWeekday(int weekday) {
     case 5: return 'Fri';
     case 6: return 'Sat';
     case 7: return 'Sun';
-    default: return '';
+    default: return ''; // Should not happen for valid weekday ints
   }
 }
