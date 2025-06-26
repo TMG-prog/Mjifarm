@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:mjifarm/article.dart';
@@ -151,6 +153,30 @@ class _BlogPageState extends State<BlogPage> {
 
   // Individual article card
   Widget blogCard(Map<String, dynamic> article) {
+    {
+    final String? imageUrl = article["imageUrl"] as String?;
+    ImageProvider? imageProvider;
+    Widget errorWidget = Container(
+      color: Colors.grey[300],
+      height: 100,
+      width: 130,
+      child: const Icon(Icons.broken_image),
+    );
+
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      if (imageUrl.startsWith('data:image/') || imageUrl.length > 500) { // Simple heuristic for Base64 (length check is a guess)
+        try {
+          // Remove "data:image/jpeg;base64," or similar prefixes if present
+          final String base64String = imageUrl.split(',').last;
+          imageProvider = MemoryImage(base64Decode(base64String));
+        } catch (e) {
+          print("Error decoding base64 image for article: $e");
+          imageProvider = null; // Fallback to null, which will show errorWidget
+        }
+      } else if (Uri.tryParse(imageUrl)?.hasScheme == true && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
+        imageProvider = NetworkImage(imageUrl);
+      }
+    }
     return GestureDetector(
       onTap: () {
         // Navigate to article detail page
@@ -170,23 +196,17 @@ class _BlogPageState extends State<BlogPage> {
         child: Column(
           children: [
             // Article image
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(12),
-              ),
-              child: Image.network(
-                article["imageUrl"] ?? '',
-                height: 100,
-                width: 140,
-                fit: BoxFit.cover,
-                errorBuilder:
-                    (_, __, ___) => Container(
+             ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: imageProvider != null
+                  ? Image(
+                      image: imageProvider,
                       height: 100,
-                      width: 140,
-                      color: Colors.grey,
-                      child: const Icon(Icons.broken_image),
-                    ),
-              ),
+                      width: 130,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => errorWidget, // Use the common error widget
+                    )
+                  : errorWidget, // Show error widget if no valid imageProvider
             ),
 
             // Article title
@@ -204,4 +224,5 @@ class _BlogPageState extends State<BlogPage> {
       ),
     );
   }
+}
 }

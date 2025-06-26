@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import 'package:mjifarm/plantdetails.dart'; // Added by colleague
-import 'dart:convert'; // Added by colleague for base64Decode
+import 'package:mjifarm/plantdetails.dart';
+import 'dart:convert';
 
-import 'package:mjifarm/weather.dart'; // Retained for getTodayWeatherSummary and WeatherData
+import 'package:mjifarm/weather.dart';
 import 'package:mjifarm/reminder.dart';
 import 'package:mjifarm/pests.dart';
 import 'package:mjifarm/plants.dart';
@@ -13,7 +13,7 @@ import 'package:mjifarm/newplant.dart';
 import 'package:mjifarm/article.dart';
 import 'package:mjifarm/farmer_features/expert_selection.dart';
 import 'package:mjifarm/auth_gate.dart';
-import 'package:mjifarm/weather_page.dart'; // Re-added for navigation to WeatherPage
+import 'package:mjifarm/weather_page.dart';
 
 class HomeDashboard extends StatelessWidget {
   const HomeDashboard({
@@ -174,11 +174,11 @@ class HomeDashboard extends StatelessWidget {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const WeatherPage()), // Ensure WeatherPage is imported
+                        MaterialPageRoute(builder: (_) => const WeatherPage()),
                       );
                     },
-                    child: FutureBuilder<WeatherData>( // Use FutureBuilder for async operation
-                      future: getTodayWeatherSummary(), // Call the async function
+                    child: FutureBuilder<WeatherData>(
+                      future: getTodayWeatherSummary(),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState == ConnectionState.waiting) {
                           return _buildCard(
@@ -186,21 +186,18 @@ class HomeDashboard extends StatelessWidget {
                             subtitle: 'Loading...',
                           );
                         } else if (snapshot.hasError) {
-                          // Consider showing a more user-friendly error
                           return _buildCard(
                             'Weather',
-                            subtitle: 'Error: ${snapshot.error}', // Display error
+                            subtitle: 'Error: ${snapshot.error}',
                           );
                         } else if (snapshot.hasData) {
                           final weatherSummary = snapshot.data!;
                           return _buildCard(
                             'Weather',
-                            // Use combined display from previous discussions if desired,
-                            // or keep it simple as temperature, condition
                             subtitle: '${weatherSummary.temperature}°C, ${weatherSummary.condition}',
                           );
                         }
-                        return _buildCard('Weather', subtitle: 'N/A'); // Fallback
+                        return _buildCard('Weather', subtitle: 'N/A');
                       },
                     ),
                   ),
@@ -271,9 +268,9 @@ class HomeDashboard extends StatelessWidget {
 
             // Plants in the farm (dynamic loading)
             SizedBox(
-              height: 100, // Adjusted height as per colleague's code
+              height: 100,
               child: FutureBuilder<List<Widget>>(
-                future: _buildFarmPlantCircles(context), // Call the new async function
+                future: _buildFarmPlantCircles(context),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
@@ -286,10 +283,9 @@ class HomeDashboard extends StatelessWidget {
                   return ListView(
                     scrollDirection: Axis.horizontal,
                     children: [
-                      // "Add" button always first
                       _buildFarmCircle(context, icon: Icons.add, label: 'Add'),
-                      const SizedBox(width: 10), // Spacing after add button
-                      ...plantWidgets, // Dynamically loaded plant circles
+                      const SizedBox(width: 10),
+                      ...plantWidgets,
                     ],
                   );
                 },
@@ -448,14 +444,13 @@ class HomeDashboard extends StatelessWidget {
             ),
         ],
       ),
-      );
+    );
   }
 
   // Circular farm action (specifically for the "Add" button in this context)
   static Widget _buildFarmCircle(
     BuildContext context, {
     IconData? icon,
-    // String? image, // Not needed for the "Add" button
     required String label,
   }) {
     return GestureDetector(
@@ -489,6 +484,30 @@ class HomeDashboard extends StatelessWidget {
     BuildContext context,
     Map<String, dynamic> article,
   ) {
+    final String? imageUrl = article["imageUrl"] as String?;
+    ImageProvider? imageProvider;
+    Widget errorWidget = Container(
+      color: Colors.grey[300],
+      height: 100,
+      width: 130,
+      child: const Icon(Icons.broken_image),
+    );
+
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      if (imageUrl.startsWith('data:image/') || imageUrl.length > 500) { // Simple heuristic for Base64 (length check is a guess)
+        try {
+          // Remove "data:image/jpeg;base64," or similar prefixes if present
+          final String base64String = imageUrl.split(',').last;
+          imageProvider = MemoryImage(base64Decode(base64String));
+        } catch (e) {
+          print("Error decoding base64 image for article: $e");
+          imageProvider = null; // Fallback to null, which will show errorWidget
+        }
+      } else if (Uri.tryParse(imageUrl)?.hasScheme == true && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
+        imageProvider = NetworkImage(imageUrl);
+      }
+    }
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -506,19 +525,15 @@ class HomeDashboard extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: Image.network(
-                article["imageUrl"] ?? '',
-                height: 100,
-                width: 130,
-                fit: BoxFit.cover,
-                errorBuilder:
-                    (_, __, ___) => Container(
-                      color: Colors.grey[300],
+              child: imageProvider != null
+                  ? Image(
+                      image: imageProvider,
                       height: 100,
                       width: 130,
-                      child: const Icon(Icons.broken_image),
-                    ),
-              ),
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => errorWidget, // Use the common error widget
+                    )
+                  : errorWidget, // Show error widget if no valid imageProvider
             ),
             const SizedBox(height: 5),
             Text(
@@ -589,7 +604,6 @@ class HomeDashboard extends StatelessWidget {
   }
 }
 
-// New helper function added by your colleague to build plant circles dynamically
 Future<List<Widget>> _buildFarmPlantCircles(BuildContext context) async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) return [];

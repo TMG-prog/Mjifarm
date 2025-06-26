@@ -334,7 +334,7 @@ class _CropInfoManagementContentState extends State<CropInfoManagementContent> {
                                     icon: const Icon(Icons.upload_file),
                                     label: const Text('Upload Image'),
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.blue.shade600,
+                                      backgroundColor: Colors.green.shade600,
                                       foregroundColor: Colors.white,
                                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),

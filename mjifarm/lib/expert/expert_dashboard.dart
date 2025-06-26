@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
-import "../expert_features/expert_chat_list.dart"; // Import the chat list screen
+import "../expert_features/expert_chat_list.dart";
+import '../expert_features/expert_articles_management.dart';
 import 'package:mjifarm/auth_gate.dart';
+
 class ExpertDashboardScreen extends StatefulWidget {
   const ExpertDashboardScreen({super.key});
 
@@ -48,7 +50,7 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
         });
       }
     } catch (e) {
-      print("Error fetching pending diagnoses count: $e");
+      print("Error fetching  diagnoses count: $e");
     } finally {
       setState(() {
         _pendingDiagnosesCount = count;
@@ -69,7 +71,7 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Expert Dashboard'),
-        
+
         actions: [
           IconButton(
             //sign out button
@@ -150,12 +152,13 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.history),
-              title: const Text('Consultation History'),
+              title: const Text('Create Articles'),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Navigate to ExpertHistoryScreen
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Navigating to History...')),
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => CreateArticleScreen(),
+                  ),
                 );
               },
             ),
@@ -177,9 +180,9 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
             const SizedBox(height: 24),
             GridView.count(
               crossAxisCount:
-                  MediaQuery.of(context).size.width > 900
+                  MediaQuery.of(context).size.width > 600
                       ? 3
-                      : (MediaQuery.of(context).size.width > 600 ? 2 : 1),
+                      : (MediaQuery.of(context).size.width > 300 ? 2 : 1),
               crossAxisSpacing: 24,
               mainAxisSpacing: 24,
               shrinkWrap: true,
@@ -216,28 +219,30 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
                   'Manage your info',
                   Icons.person,
                   Colors.blue,
-                  () {
-                    
-                  },
+                  () {},
                 ),
                 _buildExpertCard(
                   context,
-                  'View History',
+                  'Create Artcles',
                   'Past consultations',
                   Icons.history,
                   Colors.teal,
                   () {
-                    // TODO: Navigate to ExpertHistoryScreen
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => CreateArticleScreen(),
+                      ),
+                    );
                   },
                 ),
               ],
             ),
             const SizedBox(height: 32),
             Text(
-              'Welcome to your expert dashboard. Here you can find an overview of new plant diagnosis requests and access your consultation tools.',
+              'Welcome to your expert dashboard. Here you can find an overview of your consultation tools and Create Your Own Articles.',
               style: Theme.of(
                 context,
-              ).textTheme.bodyLarge?.copyWith(color: Colors.grey.shade700),
+              ).textTheme.bodyLarge?.copyWith(color: Colors.green.shade500),
             ),
           ],
         ),
