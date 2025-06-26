@@ -223,8 +223,8 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
                 ),
                 _buildExpertCard(
                   context,
-                  'Create Artcles',
-                  'Past consultations',
+                  'Create Articles',
+                  'Create Articles',
                   Icons.history,
                   Colors.teal,
                   () {

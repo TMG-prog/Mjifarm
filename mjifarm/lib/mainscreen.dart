@@ -6,7 +6,7 @@ import 'reminder.dart';
 import 'plants.dart';
 import 'diagnosis.dart';
 import 'blog.dart';
-import 'profile.dart';
+import 'fprofile.dart';
 //import 'profile.dart';
 
 class MainScreen extends StatefulWidget {
