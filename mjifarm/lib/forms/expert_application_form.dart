@@ -115,14 +115,14 @@ class _ExpertApplicationFormState extends State<ExpertApplicationForm> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Icon(Icons.badge, size: 100, color: Colors.green.shade600),
+               Image.asset(height: 200,"assets/Mjifarms.png"),
               const SizedBox(height: 30),
               Text(
                 'Are you an existing expert or would you like to apply?',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: Colors.green.shade900,
+                      color: Colors.green.shade600,
                     ),
               ),
               const SizedBox(height: 40),
@@ -137,7 +137,7 @@ class _ExpertApplicationFormState extends State<ExpertApplicationForm> {
                 icon: const Icon(Icons.login),
                 label: const Text('I already have an Expert Account'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green.shade700,
+                  backgroundColor: Colors.green.shade600,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(

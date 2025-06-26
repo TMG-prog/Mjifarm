@@ -5,18 +5,18 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-class FarmerProfilePage extends StatefulWidget {
-  const FarmerProfilePage({super.key});
+class ExpertProfilePage extends StatefulWidget {
+  const ExpertProfilePage({super.key});
 
   @override
-  _FarmerProfilePageState createState() => _FarmerProfilePageState();
+  _ExpertProfilePageState createState() => _ExpertProfilePageState();
 }
 
-class _FarmerProfilePageState extends State<FarmerProfilePage> {
+class _ExpertProfilePageState extends State<ExpertProfilePage> {
   final _formKey = GlobalKey<FormState>();
   final User? user = FirebaseAuth.instance.currentUser;
 
-  late DatabaseReference farmersRef;
+  late DatabaseReference ExpertsRef;
   bool _isLoading = true;
 
   // State variable to track if an image has been uploaded/loaded
@@ -26,8 +26,8 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
   late TextEditingController _nameController;
   late TextEditingController _emailController;
   late TextEditingController _phoneController;
-  late TextEditingController _locationController;
-  late TextEditingController _farmingTypeController;
+  late TextEditingController _contactController;
+  late TextEditingController _expertiseAreaController;
   final TextEditingController _imageBase64Controller = TextEditingController(); // Holds the Base64 string
 
   String? _previewImageBase64; // To hold the Base64 for the current preview image
@@ -39,11 +39,11 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
     _nameController = TextEditingController();
     _emailController = TextEditingController();
     _phoneController = TextEditingController();
-    _locationController = TextEditingController();
-    _farmingTypeController = TextEditingController();
+    _contactController = TextEditingController();
+    _expertiseAreaController = TextEditingController();
 
     if (user != null) {
-      farmersRef = FirebaseDatabase.instance.ref("farmers/${user!.uid}");
+      ExpertsRef = FirebaseDatabase.instance.ref("expert_profiles/${user!.uid}");
       _listenToProfile(); // Start listening for real-time updates
     } else {
       // Handle case where user is not logged in (should ideally be handled by AuthGate)
@@ -59,15 +59,15 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
-    _locationController.dispose();
-    _farmingTypeController.dispose();
+    _contactController.dispose();
+    _expertiseAreaController.dispose();
     _imageBase64Controller.dispose();
     super.dispose();
   }
 
   // Real-time listener for profile data
   void _listenToProfile() {
-    farmersRef.onValue.listen(
+    ExpertsRef.onValue.listen(
       (event) {
         final dataSnapshot = event.snapshot;
         if (dataSnapshot.exists && dataSnapshot.value != null && dataSnapshot.value is Map) {
@@ -77,8 +77,8 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
             _nameController.text = profileData['name']?.toString() ?? user?.displayName ?? '';
             _emailController.text = profileData['email']?.toString() ?? user?.email ?? '';
             _phoneController.text = profileData['phone']?.toString() ?? '';
-            _locationController.text = profileData['location']?.toString() ?? '';
-            _farmingTypeController.text = profileData['farmingType']?.toString() ?? '';
+            _contactController.text = profileData['contactHandle']?.toString() ?? '';
+            _expertiseAreaController.text = profileData['expertiseArea']?.toString() ?? '';
 
             final String? fetchedImageBase64 = profileData['image']?.toString();
             if (fetchedImageBase64 != null && fetchedImageBase64.isNotEmpty) {
@@ -98,8 +98,8 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
             _nameController.text = user?.displayName ?? '';
             _emailController.text = user?.email ?? '';
             _phoneController.text = '';
-            _locationController.text = '';
-            _farmingTypeController.text = '';
+            _contactController.text = '';
+            _expertiseAreaController.text = '';
             _previewImageBase64 = null;
             _imageBase64Controller.text = '';
             _isImageUploaded = false; // No image, so fields are enabled
@@ -133,8 +133,8 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
     final String currentName = _nameController.text.trim();
     final String currentEmail = _emailController.text.trim();
     final String currentPhone = _phoneController.text.trim();
-    final String currentLocation = _locationController.text.trim();
-    final String currentFarmingType = _farmingTypeController.text.trim();
+    final String currentContact = _contactController.text.trim();
+    final String currentexpertiseArea = _expertiseAreaController.text.trim();
     final String currentImageBase64 = _imageBase64Controller.text.trim();
 
     try {
@@ -144,12 +144,12 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
       }
      
 
-      await farmersRef.update({ // Use .set() if you want to overwrite, .update() if you want to merge
+      await ExpertsRef.update({ // Use .set() if you want to overwrite, .update() if you want to merge
         "name": currentName,
         "email": currentEmail, // Store email here as well
         'phone': currentPhone,
-        'location': currentLocation,
-        'farmingType': currentFarmingType,
+        'contactHandle': currentContact,
+        'expertiseArea': currentexpertiseArea,
         'image': currentImageBase64, // Correctly store the Base64 string
       });
 
@@ -198,7 +198,7 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
     if (_isLoading) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Farmer Profile'),
+          title: const Text('Expert Profile'),
           backgroundColor: Colors.green.shade700,
         ),
         body: const Center(child: CircularProgressIndicator()),
@@ -207,7 +207,7 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Farmer Profile'),
+        title: const Text('Expert Profile'),
         backgroundColor: Colors.green.shade700,
       ),
       body: Padding(
@@ -341,28 +341,28 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
                 const SizedBox(height: 10),
 
                 TextFormField(
-                  controller: _locationController,
+                  controller: _contactController,
                   decoration: const InputDecoration(
-                    labelText: 'Location',
+                    labelText: 'Contact Handle',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.all(Radius.circular(10)),
                     ),
                   ),
                   validator: (val) =>
-                      val == null || val.isEmpty ? 'Enter location' : null,
+                      val == null || val.isEmpty ? 'Enter Contact Handle' : null,
                 ),
                 const SizedBox(height: 10),
 
                 TextFormField(
-                  controller: _farmingTypeController,
+                  controller: _expertiseAreaController,
                   decoration: const InputDecoration(
-                    labelText: 'Farming Type',
+                    labelText: 'Area of Expertise',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.all(Radius.circular(10)),
                     ),
                   ),
                   validator: (val) =>
-                      val == null || val.isEmpty ? 'Enter farming type' : null,
+                      val == null || val.isEmpty ? 'Enter area of expertise' : null,
                 ),
                 const SizedBox(height: 25),
 

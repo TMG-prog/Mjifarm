@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:mjifarm/article.dart';
+import 'package:mjifarm/fprofile.dart';
 // Make sure this file exists and is imported
 
 class BlogPage extends StatefulWidget {
@@ -31,7 +32,12 @@ class _BlogPageState extends State<BlogPage> {
       appBar: AppBar(
         title: const Text("Articles"),
         actions: [
-          IconButton(icon: const Icon(Icons.settings), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.settings), onPressed: () {
+            Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => FarmerProfilePage()),
+                );
+          }),
         ],
       ),
       body: Column(

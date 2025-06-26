@@ -16,9 +16,7 @@ import 'package:mjifarm/auth_gate.dart';
 import 'package:mjifarm/weather_page.dart';
 
 class HomeDashboard extends StatelessWidget {
-  const HomeDashboard({
-    super.key,
-  });
+  const HomeDashboard({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -93,7 +91,11 @@ class HomeDashboard extends StatelessWidget {
                           const SizedBox(height: 8),
                           FutureBuilder<DatabaseEvent>(
                             future:
-                                FirebaseDatabase.instance.ref('tasks/${FirebaseAuth.instance.currentUser?.uid}').once(),
+                                FirebaseDatabase.instance
+                                    .ref(
+                                      'tasks/${FirebaseAuth.instance.currentUser?.uid}',
+                                    )
+                                    .once(),
                             builder: (context, snapshot) {
                               if (snapshot.connectionState ==
                                   ConnectionState.waiting) {
@@ -180,11 +182,9 @@ class HomeDashboard extends StatelessWidget {
                     child: FutureBuilder<WeatherData>(
                       future: getTodayWeatherSummary(),
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return _buildCard(
-                            'Weather',
-                            subtitle: 'Loading...',
-                          );
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return _buildCard('Weather', subtitle: 'Loading...');
                         } else if (snapshot.hasError) {
                           return _buildCard(
                             'Weather',
@@ -194,7 +194,8 @@ class HomeDashboard extends StatelessWidget {
                           final weatherSummary = snapshot.data!;
                           return _buildCard(
                             'Weather',
-                            subtitle: '${weatherSummary.temperature}°C, ${weatherSummary.condition}',
+                            subtitle:
+                                '${weatherSummary.temperature}°C, ${weatherSummary.condition}',
                           );
                         }
                         return _buildCard('Weather', subtitle: 'N/A');
@@ -248,6 +249,7 @@ class HomeDashboard extends StatelessWidget {
             // In the Farm Section
             GestureDetector(
               onTap: () {
+                Navigator.pop(context);
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => MyPlantsPage()),
@@ -275,7 +277,9 @@ class HomeDashboard extends StatelessWidget {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   } else if (snapshot.hasError) {
-                    return Center(child: Text('Error loading plants: ${snapshot.error}'));
+                    return Center(
+                      child: Text('Error loading plants: ${snapshot.error}'),
+                    );
                   }
 
                   final plantWidgets = snapshot.data ?? [];
@@ -494,7 +498,8 @@ class HomeDashboard extends StatelessWidget {
     );
 
     if (imageUrl != null && imageUrl.isNotEmpty) {
-      if (imageUrl.startsWith('data:image/') || imageUrl.length > 500) { // Simple heuristic for Base64 (length check is a guess)
+      if (imageUrl.startsWith('data:image/') || imageUrl.length > 500) {
+        // Simple heuristic for Base64 (length check is a guess)
         try {
           // Remove "data:image/jpeg;base64," or similar prefixes if present
           final String base64String = imageUrl.split(',').last;
@@ -503,7 +508,8 @@ class HomeDashboard extends StatelessWidget {
           print("Error decoding base64 image for article: $e");
           imageProvider = null; // Fallback to null, which will show errorWidget
         }
-      } else if (Uri.tryParse(imageUrl)?.hasScheme == true && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
+      } else if (Uri.tryParse(imageUrl)?.hasScheme == true &&
+          (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
         imageProvider = NetworkImage(imageUrl);
       }
     }
@@ -525,15 +531,18 @@ class HomeDashboard extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: imageProvider != null
-                  ? Image(
-                      image: imageProvider,
-                      height: 100,
-                      width: 130,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => errorWidget, // Use the common error widget
-                    )
-                  : errorWidget, // Show error widget if no valid imageProvider
+              child:
+                  imageProvider != null
+                      ? Image(
+                        image: imageProvider,
+                        height: 100,
+                        width: 130,
+                        fit: BoxFit.cover,
+                        errorBuilder:
+                            (_, __, ___) =>
+                                errorWidget, // Use the common error widget
+                      )
+                      : errorWidget, // Show error widget if no valid imageProvider
             ),
             const SizedBox(height: 5),
             Text(
@@ -570,12 +579,12 @@ class HomeDashboard extends StatelessWidget {
             isEmpty
                 ? []
                 : [
-                    const BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 4,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
+                  const BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -638,19 +647,20 @@ Future<List<Widget>> _buildFarmPlantCircles(BuildContext context) async {
           MaterialPageRoute(
             builder:
                 (_) => PlantDetailsPage(
-                    name: plant['name'] ?? 'Unnamed Plant',
-                    imagePath:
-                        plant['imageBase64'] != null
-                            ? 'data:image/jpeg;base64,${plant['imageBase64']}' // Correctly handles base64 image path
-                            : 'assets/plant.png', // Fallback for asset image
-                    growthStatus: 'View Details',
-                    growthPercentage: 0, // Placeholder, actual logic might be needed
-                    harvestDate: plant['maturityDate'] ?? 'Unknown',
-                    gardenName: plant['gardenName'],
-                    container: plant['container'],
-                    category: plant['category'],
-                    plantingDate: plant['plantingDate'],
-                  ),
+                  name: plant['name'] ?? 'Unnamed Plant',
+                  imagePath:
+                      plant['imageBase64'] != null
+                          ? 'data:image/jpeg;base64,${plant['imageBase64']}' // Correctly handles base64 image path
+                          : 'assets/plant.png', // Fallback for asset image
+                  growthStatus: 'View Details',
+                  growthPercentage:
+                      0, // Placeholder, actual logic might be needed
+                  harvestDate: plant['maturityDate'] ?? 'Unknown',
+                  gardenName: plant['gardenName'],
+                  container: plant['container'],
+                  category: plant['category'],
+                  plantingDate: plant['plantingDate'],
+                ),
           ),
         );
       },

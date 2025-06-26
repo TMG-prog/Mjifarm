@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:mjifarm/admin/diagnosis_review.dart';
+import 'package:mjifarm/expert_features/profile.dart';
 import "../expert_features/expert_chat_list.dart";
 import '../expert_features/expert_articles_management.dart';
 import 'package:mjifarm/auth_gate.dart';
@@ -14,7 +16,7 @@ class ExpertDashboardScreen extends StatefulWidget {
 
 class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
   User? _currentUser;
-  int _pendingDiagnosesCount = 0;
+  int _diagnosisCount=0;
   bool _isLoading = true;
   final DatabaseReference _cropLogsRef = FirebaseDatabase.instance.ref(
     'crop_logs',
@@ -24,10 +26,10 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
   void initState() {
     super.initState();
     _currentUser = FirebaseAuth.instance.currentUser;
-    _fetchPendingDiagnosesCount();
+    _fetchDiagnosesCount();
   }
 
-  Future<void> _fetchPendingDiagnosesCount() async {
+  Future<void> _fetchDiagnosesCount() async {
     setState(() {
       _isLoading = true;
     });
@@ -41,8 +43,7 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
           if (cropLogValue is Map && cropLogValue['diagnoses'] is Map) {
             Map<dynamic, dynamic> diagnosesMap = cropLogValue['diagnoses'];
             diagnosesMap.forEach((diagId, diagValue) {
-              // Assuming a 'status' field in diagnosis, e.g., 'pending', 'reviewed'
-              if (diagValue is Map && diagValue['status'] == 'pending') {
+              if (diagValue is Map) {
                 count++;
               }
             });
@@ -53,7 +54,7 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
       print("Error fetching  diagnoses count: $e");
     } finally {
       setState(() {
-        _pendingDiagnosesCount = count;
+        _diagnosisCount = count;
         _isLoading = false;
       });
     }
@@ -115,13 +116,13 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.pending_actions),
-              title: Text('Pending Diagnoses ($_pendingDiagnosesCount)'),
+              title: Text('Diagnoses ($_diagnosisCount)'),
               onTap: () {
                 Navigator.pop(context);
                 // TODO: Navigate to PendingDiagnosesScreen
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Navigating to Pending Diagnoses...'),
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => DiagnosisReviewContent(),
                   ),
                 );
               },
@@ -144,14 +145,13 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
               title: const Text('My Profile'),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Navigate to ExpertProfileScreen
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Navigating to My Profile...')),
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => ExpertProfilePage()),
                 );
               },
             ),
             ListTile(
-              leading: const Icon(Icons.history),
+              leading: const Icon(Icons.book),
               title: const Text('Create Articles'),
               onTap: () {
                 Navigator.pop(context);
@@ -190,12 +190,16 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
               children: [
                 _buildExpertCard(
                   context,
-                  'Pending Diagnoses',
-                  _pendingDiagnosesCount.toString(),
+                  ' Diagnoses',
+                  _diagnosisCount.toString(),
                   Icons.pending_actions,
                   Colors.orange,
                   () {
-                    // TODO: Navigate to PendingDiagnosesScreen
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => DiagnosisReviewContent(),
+                      ),
+                    );
                   },
                 ),
                 // NEW: Chat Card
@@ -219,13 +223,19 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
                   'Manage your info',
                   Icons.person,
                   Colors.blue,
-                  () {},
+                  () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => ExpertProfilePage(),
+                      ),
+                    );
+                  },
                 ),
                 _buildExpertCard(
                   context,
                   'Create Articles',
                   'Create Articles',
-                  Icons.history,
+                  Icons.book,
                   Colors.teal,
                   () {
                     Navigator.of(context).push(

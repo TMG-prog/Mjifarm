@@ -102,7 +102,7 @@ class _ExpertLoginScreenState extends State<ExpertLoginScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Expert Login'),
-        backgroundColor: Colors.green.shade800,
+        backgroundColor: Colors.green.shade700,
         elevation: 0,
       ),
       body: Center(
@@ -114,18 +114,18 @@ class _ExpertLoginScreenState extends State<ExpertLoginScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Icon(
-                  Icons.science_outlined,
-                  size: 100,
-                  color: Colors.green.shade600,
-                ),
+               
+                  
+               Image.asset(height: 200,"assets/Mjifarms.png"),
+                
+                
                 const SizedBox(height: 30),
                 Text(
                   'Sign In as an Expert',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: Colors.green.shade900,
+                        color: Colors.green.shade600,
                       ),
                 ),
                 const SizedBox(height: 30),
