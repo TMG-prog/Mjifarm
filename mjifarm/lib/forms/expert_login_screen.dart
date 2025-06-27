@@ -182,8 +182,8 @@ class _ExpertLoginScreenState extends State<ExpertLoginScreen> {
                     : ElevatedButton(
                         onPressed: _signInAsExpert,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green.shade700,
-                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.green.shade700,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),

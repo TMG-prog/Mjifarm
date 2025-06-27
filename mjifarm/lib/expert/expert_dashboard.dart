@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:mjifarm/admin/diagnosis_review.dart';
+import 'package:mjifarm/expert_features/diagnosis_review.dart';
 import 'package:mjifarm/expert_features/profile.dart';
 import "../expert_features/expert_chat_list.dart";
 import '../expert_features/expert_articles_management.dart';
@@ -119,7 +119,7 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
               title: Text('Diagnoses ($_diagnosisCount)'),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Navigate to PendingDiagnosesScreen
+                
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => DiagnosisReviewContent(),
@@ -180,9 +180,9 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
             const SizedBox(height: 24),
             GridView.count(
               crossAxisCount:
-                  MediaQuery.of(context).size.width > 600
+                  MediaQuery.of(context).size.width > 900
                       ? 3
-                      : (MediaQuery.of(context).size.width > 300 ? 2 : 1),
+                      : (MediaQuery.of(context).size.width > 600 ? 2 : 1),
               crossAxisSpacing: 24,
               mainAxisSpacing: 24,
               shrinkWrap: true,
