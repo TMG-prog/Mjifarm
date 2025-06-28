@@ -1,0 +1,14 @@
+{ "@@locale": "en",
+"wrongPasswordErrorText": "Oops! That's not the right password. Please double-check and try again.",
+"userNotFound": "It seems there's no account with that email. Maybe try signing up?",
+"invalidEmailErrorText": "Looks like an invalid email address. Please fix it.",
+"emailAlreadyInUseErrorText": "This email is already registered. Please sign in or use a different email.",
+"passwordIsTooWeakErrorText": "Your password is a bit weak. Please choose a stronger one!",
+"networkRequestFailed": "Can't connect to the server. Please check your internet connection and try again.",
+"goBackButtonLabel": "Go Back",
+"signInActionText": "Sign in",
+"registerActionText": "Register",
+"forgotPasswordButtonLabel": "Forgot password?",
+"invalidCredential": "Invalid email or password.",
+"unknownError":"Invalid email or password."
+}

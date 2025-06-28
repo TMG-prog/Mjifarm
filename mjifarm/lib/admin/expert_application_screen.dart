@@ -21,8 +21,8 @@ class _AdminExpertApplicationsScreenState extends State<AdminExpertApplicationsS
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Expert Applications (Admin)'),
-        backgroundColor: Colors.redAccent, // Distinct color for admin view
+        title: const Text('Expert Applications'),
+        backgroundColor: Colors.greenAccent, 
       ),
       body: StreamBuilder<DatabaseEvent>(
         stream: _applicationsRef.onValue, // Listen for real-time changes

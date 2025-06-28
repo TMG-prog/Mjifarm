@@ -1,14 +1,13 @@
 import 'dart:convert';
-import 'dart:html'
-    as html; // Now always imports dart:html directly for web-only
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
-// Removed:
-// import 'dart:io';
-// import 'package:open_filex/open_filex.dart';
-// import 'package:path_provider/path_provider.dart';
-// import 'package:permission_handler/permission_handler.dart';
-// import 'package:universal_platform/universal_platform.dart'; // No longer needed for platform checks
+import 'package:flutter/foundation.dart'; // Still needed if you use kIsWeb elsewhere, but not for ReportDownloader instantiation here.
+
+// --- SIMPLIFIED IMPORT ---
+// Only import the single entry point file for ReportDownloader.
+// This file contains the abstract class and its factory constructor.
+import 'package:mjifarm/services/report_downloader.dart';
+// --- END SIMPLIFIED IMPORT ---
 
 class DiagnosisReviewContent extends StatefulWidget {
   const DiagnosisReviewContent({super.key});
@@ -25,11 +24,20 @@ class _DiagnosisReviewContentState extends State<DiagnosisReviewContent> {
   final String _vercelImageProxyBaseUrl =
       'https://mjifarms-images.vercel.app/api';
 
+  // Declare the ReportDownloader instance
+  late ReportDownloader _reportDownloader;
+
   @override
   void initState() {
     super.initState();
     _cropLogsRef = FirebaseDatabase.instance.ref('crop_logs');
     _listenToDiagnoses();
+
+    // --- KEY CHANGE HERE ---
+    // Instantiate ReportDownloader using its factory constructor.
+    // The factory in 'report_downloader.dart' internally handles
+    // picking the correct platform implementation.
+    _reportDownloader = ReportDownloader(context: context);
   }
 
   void _listenToDiagnoses() {
@@ -73,13 +81,15 @@ class _DiagnosisReviewContentState extends State<DiagnosisReviewContent> {
   }
 
   void _showSnackBar(String message, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: const Duration(seconds: 2),
-        backgroundColor: color,
-      ),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          duration: const Duration(seconds: 2),
+          backgroundColor: color,
+        ),
+      );
+    }
   }
 
   ImageProvider? _getDiagnosisImageProvider(String? rawPlantIdImageUrl) {
@@ -87,19 +97,15 @@ class _DiagnosisReviewContentState extends State<DiagnosisReviewContent> {
       return null;
     }
 
-    // Determine if it's a direct Plant.ID URL or a Base64 string from rawApiResponse
-    // Assuming 'rawPlantIdImageUrl' here is what comes directly from images[0] in your Vercel JSON
     if (rawPlantIdImageUrl.startsWith('http://') ||
         rawPlantIdImageUrl.startsWith('https://')) {
-      // It's a URL, so construct the proxy URL
       final Uri proxyUri = Uri.parse(_vercelImageProxyBaseUrl).replace(
         queryParameters: {
           'url': rawPlantIdImageUrl,
-        }, // Pass the original URL to your proxy
+        },
       );
-      return NetworkImage(proxyUri.toString()); // Load from your Vercel proxy
+      return NetworkImage(proxyUri.toString());
     } else {
-      // Assume it's a Base64 string (if your Vercel function decided to send it that way directly)
       try {
         final String base64String =
             rawPlantIdImageUrl.contains(',')
@@ -108,11 +114,10 @@ class _DiagnosisReviewContentState extends State<DiagnosisReviewContent> {
         return MemoryImage(base64Decode(base64String));
       } catch (e) {
         print("Error decoding Base64 image for diagnosis: $e");
-        return null; // Return null if decoding fails
+        return null;
       }
     }
   }
-  // Extract originalImageString from the nested structure
 
   Future<void> _handleReview(String diagnosisId) async {
     Map<String, dynamic>? specificDiagnosis;
@@ -134,8 +139,8 @@ class _DiagnosisReviewContentState extends State<DiagnosisReviewContent> {
     String diagnosisDate =
         specificDiagnosis['date'] != null
             ? DateTime.fromMillisecondsSinceEpoch(
-              specificDiagnosis['date'],
-            ).toLocal().toString().split(' ')[0]
+                specificDiagnosis['date'],
+              ).toLocal().toString().split(' ')[0]
             : 'N/A';
     List<dynamic> recommendationsRaw =
         specificDiagnosis['recommendations'] ?? [];
@@ -152,20 +157,18 @@ class _DiagnosisReviewContentState extends State<DiagnosisReviewContent> {
       }
     }
 
-    // Related Disease Images need separate handling if they are URLs or Base64
     List<String> relatedDiseaseImages = [];
     final dynamic relatedImagesData =
-        specificDiagnosis['relatedDiseasesImages']; // Ensure this key is correct
+        specificDiagnosis['relatedDiseasesImages'];
     if (relatedImagesData != null) {
       if (relatedImagesData is Iterable) {
-        // Assume these are URLs or Base64 strings. If they are URLs, they also need proxying.
         relatedDiseaseImages = List<String>.from(
           relatedImagesData.map((e) => e.toString()),
         );
       } else if (relatedImagesData is String &&
           (relatedImagesData.startsWith('http') ||
               relatedImagesData.startsWith('data:image'))) {
-        relatedDiseaseImages = [relatedImagesData]; // If it's a single string
+        relatedDiseaseImages = [relatedImagesData];
       }
     }
 
@@ -205,18 +208,13 @@ class _DiagnosisReviewContentState extends State<DiagnosisReviewContent> {
     reportContent += "Related Disease Images (URLs):\n";
     if (relatedDiseaseImages.isNotEmpty) {
       for (int i = 0; i < relatedDiseaseImages.length; i++) {
-        // IMPORTANT: If 'relatedDiseaseImages' also contain Plant.ID URLs,
-        // you would also need to proxy them here when generating the report text.
-        // For now, assuming they are direct URLs that might not load in the report file if CORS is strict.
-        // If you want them to be accessible in the generated report, you might need to
-        // include the Vercel proxy URL for them too in the report text.
         final String proxiedImageUrl =
             (relatedDiseaseImages[i].startsWith('http://') ||
                     relatedDiseaseImages[i].startsWith('https://'))
                 ? Uri.parse(_vercelImageProxyBaseUrl)
                     .replace(queryParameters: {'url': relatedDiseaseImages[i]})
                     .toString()
-                : 'N/A (not a URL)'; // Or handle Base64 for related images too
+                : 'N/A (not a URL)';
         reportContent += "${i + 1}. $proxiedImageUrl\n";
       }
     } else {
@@ -226,7 +224,6 @@ class _DiagnosisReviewContentState extends State<DiagnosisReviewContent> {
 
     reportContent += "Raw API Response:\n";
     if (rawApiResponse.isNotEmpty) {
-      // Just print a snippet of the raw API response to keep report concise
       reportContent += rawApiResponse.join('\n');
     } else {
       reportContent += "No raw API response data found or was empty.\n";
@@ -235,23 +232,8 @@ class _DiagnosisReviewContentState extends State<DiagnosisReviewContent> {
 
     final fileName = 'diagnosis_report_${diagnosisId}.txt';
 
-    // *** PURELY WEB-BASED DOWNLOAD LOGIC ***
-    try {
-      final bytes = utf8.encode(reportContent);
-      final blob = html.Blob([bytes], 'text/pdf');
-      final url = html.Url.createObjectUrlFromBlob(blob);
-
-      final anchor =
-          html.AnchorElement(href: url)
-            ..setAttribute('download', fileName)
-            ..click(); // Simulate a click to trigger the download
-
-      html.Url.revokeObjectUrl(url); // Clean up the URL
-      _showSnackBar('Report download initiated.', Colors.green);
-    } catch (e) {
-      print('Error downloading report for web: $e');
-      _showSnackBar('Error downloading report for web: $e', Colors.red);
-    }
+    // Use the platform-specific downloader instance
+    await _reportDownloader.downloadReport(fileName, reportContent);
   }
 
   @override
@@ -263,54 +245,48 @@ class _DiagnosisReviewContentState extends State<DiagnosisReviewContent> {
         backgroundColor: Colors.green.shade700,
         foregroundColor: Colors.white,
       ),
-      body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : SingleChildScrollView(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Diagnosis Review',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green.shade800,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Review recently submitted plant diagnoses and their AI predictions.',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    _diagnoses.isEmpty
-                        ? const Center(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Diagnosis Review',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green.shade800,
+                        ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Review recently submitted plant diagnoses and their AI predictions.',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: Colors.grey.shade700,
+                        ),
+                  ),
+                  const SizedBox(height: 24),
+                  _diagnoses.isEmpty
+                      ? const Center(
                           child: Text(
                             'No diagnoses found.',
                             style: TextStyle(fontSize: 16, color: Colors.grey),
                           ),
                         )
-                        : GridView.builder(
+                      : GridView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount:
-                                    MediaQuery.of(context).size.width > 900
-                                        ? 3
-                                        : (MediaQuery.of(context).size.width >
-                                                600
-                                            ? 2
-                                            : 1),
-                                crossAxisSpacing: 24,
-                                mainAxisSpacing: 24,
-                                childAspectRatio: 0.8,
-                              ),
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: MediaQuery.of(context).size.width > 900
+                                ? 3
+                                : (MediaQuery.of(context).size.width > 600
+                                    ? 2
+                                    : 1),
+                            crossAxisSpacing: 24,
+                            mainAxisSpacing: 24,
+                            childAspectRatio: 0.8,
+                          ),
                           itemCount: _diagnoses.length,
                           itemBuilder: (context, index) {
                             final diag = _diagnoses[index];
@@ -319,13 +295,12 @@ class _DiagnosisReviewContentState extends State<DiagnosisReviewContent> {
                                 diag['pestOrDisease'] ?? 'N/A';
                             double confidenceLevel =
                                 (diag['confidenceLevel'] as num?)?.toDouble() ??
-                                0.0;
-                            String date =
-                                diag['date'] != null
-                                    ? DateTime.fromMillisecondsSinceEpoch(
-                                      diag['date'],
-                                    ).toLocal().toString().split(' ')[0]
-                                    : 'N/A';
+                                    0.0;
+                            String date = diag['date'] != null
+                                ? DateTime.fromMillisecondsSinceEpoch(
+                                        diag['date'],
+                                      ).toLocal().toString().split(' ')[0]
+                                : 'N/A';
                             List<dynamic> recommendationsRaw =
                                 diag['recommendations'] ?? [];
                             List<String> recommendations = List<String>.from(
@@ -342,7 +317,6 @@ class _DiagnosisReviewContentState extends State<DiagnosisReviewContent> {
                                   rawApiData['input']['images'][0] as String?;
                             }
 
-                            // Use the new helper function with the Plant.ID URL (which will be proxied)
                             final ImageProvider? imageProvider =
                                 _getDiagnosisImageProvider(originalImageString);
 
@@ -361,87 +335,85 @@ class _DiagnosisReviewContentState extends State<DiagnosisReviewContent> {
                                   children: [
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(10),
-                                      child:
-                                          imageProvider != null
-                                              ? Image(
-                                                image: imageProvider,
-                                                height: 120,
-                                                width: double.infinity,
-                                                fit: BoxFit.cover,
-                                                errorBuilder:
-                                                    (
-                                                      context,
-                                                      error,
-                                                      stackTrace,
-                                                    ) => Container(
-                                                      height: 120,
-                                                      color: Colors.grey[200],
-                                                      child: const Center(
-                                                        child: Icon(
-                                                          Icons.broken_image,
-                                                          color: Colors.grey,
-                                                          size: 40,
-                                                        ),
-                                                      ),
-                                                    ),
-                                              )
-                                              : Container(
+                                      child: imageProvider != null
+                                          ? Image(
+                                              image: imageProvider,
+                                              height: 120,
+                                              width: double.infinity,
+                                              fit: BoxFit.cover,
+                                              errorBuilder:
+                                                  (context, error, stackTrace) =>
+                                                      Container(
                                                 height: 120,
                                                 color: Colors.grey[200],
                                                 child: const Center(
                                                   child: Icon(
-                                                    Icons.image_not_supported,
+                                                    Icons.broken_image,
                                                     color: Colors.grey,
                                                     size: 40,
                                                   ),
                                                 ),
                                               ),
+                                            )
+                                          : Container(
+                                              height: 120,
+                                              color: Colors.grey[200],
+                                              child: const Center(
+                                                child: Icon(
+                                                  Icons.image_not_supported,
+                                                  color: Colors.grey,
+                                                  size: 40,
+                                                ),
+                                              ),
+                                            ),
                                     ),
                                     const SizedBox(height: 12),
                                     Text(
                                       pestOrDisease,
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.titleLarge?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleLarge
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
                                       'Plant: $plantName',
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.bodyMedium?.copyWith(
-                                        color: Colors.grey.shade700,
-                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            color: Colors.grey.shade700,
+                                          ),
                                     ),
                                     Text(
                                       'Confidence: ${confidenceLevel.toStringAsFixed(2)}%',
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.bodySmall?.copyWith(
-                                        fontStyle: FontStyle.italic,
-                                        color: Colors.grey.shade600,
-                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            fontStyle: FontStyle.italic,
+                                            color: Colors.grey.shade600,
+                                          ),
                                     ),
                                     Text(
                                       'Date: $date',
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.bodySmall?.copyWith(
-                                        color: Colors.grey.shade600,
-                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: Colors.grey.shade600,
+                                          ),
                                     ),
                                     const SizedBox(height: 8),
                                     Flexible(
                                       child: Text(
                                         'Recommendations: ${recommendations.join(', ')}',
                                         style:
-                                            Theme.of(
-                                              context,
-                                            ).textTheme.bodySmall,
+                                            Theme.of(context).textTheme.bodySmall,
                                         maxLines: 3,
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -450,18 +422,17 @@ class _DiagnosisReviewContentState extends State<DiagnosisReviewContent> {
                                     Align(
                                       alignment: Alignment.center,
                                       child: ElevatedButton.icon(
-                                        onPressed:
-                                            () => _handleReview(diag['id']),
-                                        icon: const Icon(Icons.visibility),
-                                        label: const Text('View Report'),
+                                        onPressed: () =>
+                                            _handleReview(diag['id']),
+                                        icon: const Icon(Icons.download),
+                                        label: const Text('Download Report'),
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor:
                                               Colors.green.shade600,
                                           foregroundColor: Colors.white,
                                           shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
                                           ),
                                         ),
                                       ),
@@ -472,9 +443,9 @@ class _DiagnosisReviewContentState extends State<DiagnosisReviewContent> {
                             );
                           },
                         ),
-                  ],
-                ),
+                ],
               ),
+            ),
     );
   }
 }

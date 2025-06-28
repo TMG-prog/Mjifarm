@@ -49,6 +49,8 @@ dependencies:
   firebase_auth: ^4.16.0
   firebase_ui_oauth_google: ^1.3.0
   firebase_database: ^10.5.7
+  flutter_localizations:
+    sdk: flutter
   intl: ^0.20.2
   flutter_map: ^8.1.1
   latlong2: ^0.9.1
@@ -57,6 +59,10 @@ dependencies:
   permission_handler: ^12.0.0+1
   open_filex: ^4.7.0
   universal_platform: ^1.1.0
+  flutter_gen: ^5.10.0
+  flutter_ui_auth: ^1.0.0
+  firebase_ui_auth: ^1.14.0
+  google_sign_in: ^6.3.0
 
 dev_dependencies:
   flutter_test:
@@ -85,6 +91,7 @@ flutter:
     - assets/Mjifarms.jpg
     - assets/Mjifarms.png
     - .env
+  generate: true # <--- THIS IS IMPORTANT!
 
   #   - images/a_dot_ham.jpeg
 
