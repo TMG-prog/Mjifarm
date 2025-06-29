@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http; //  needed for Image.network
 import 'dart:math'; //  needed for max/min in forecast calculation
-import 'package:mjifarm/weather.dart'; 
-
-
+import 'package:mjifarm/weather.dart';
 
 // Changed back to StatelessWidget
 class WeatherPage extends StatelessWidget {
   const WeatherPage({super.key});
-
 
   Icon _getWeatherIcon(String condition) {
     if (condition.toLowerCase().contains('clear') ||
@@ -25,7 +22,6 @@ class WeatherPage extends StatelessWidget {
     return Icon(Icons.cloud_queue, color: Colors.grey); // Default
   }
 
-  
   String _getWeekday(int weekday) {
     switch (weekday) {
       case 1:
@@ -208,24 +204,6 @@ class WeatherPage extends StatelessWidget {
           );
         },
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.green,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today),
-            label: 'Schedule',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.share), label: 'Share'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.favorite),
-            label: 'Favorites',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-        ],
-      ),
     );
   }
 
@@ -266,10 +244,8 @@ class WeatherPage extends StatelessWidget {
     );
   }
 
- 
   List<String> _generateFarmingInsights(Map<String, dynamic> weatherData) {
     List<String> insights = [];
-    
 
     final currentTemp = (weatherData['main']?['temp'] as num?)?.round();
     final humidity = (weatherData['main']?['humidity'] as num?)?.round();
@@ -498,7 +474,7 @@ class WeatherPage extends StatelessWidget {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4),
       leading: _getWeatherIcon(condition),
-      dense: true, 
+      dense: true,
       title: Text(
         day,
         style: const TextStyle(fontWeight: FontWeight.w500),
@@ -517,22 +493,14 @@ class WeatherPage extends StatelessWidget {
           Text(
             // COMBINED HIGH AND LOW TEMPERATURES ON ONE LINE
             '$high / $low',
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ), 
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(
-            height: 2,
-          ), 
+          const SizedBox(height: 2),
           Text(
             '$rain rain',
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.blue,
-            ), 
+            style: const TextStyle(fontSize: 12, color: Colors.blue),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
