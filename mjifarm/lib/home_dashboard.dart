@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:mjifarm/plantdetails.dart';
 import 'dart:convert';
 
-import 'package:mjifarm/weather.dart';
+import 'package:mjifarm/weather.dart' as weather_api; // Alias for clarity
 import 'package:mjifarm/reminder.dart';
 import 'package:mjifarm/pests.dart';
 import 'package:mjifarm/plants.dart';
@@ -14,9 +14,46 @@ import 'package:mjifarm/article.dart';
 import 'package:mjifarm/farmer_features/expert_selection.dart';
 import 'package:mjifarm/auth_gate.dart';
 import 'package:mjifarm/weather_page.dart';
+import 'package:geolocator/geolocator.dart'; // Import geolocator for _determinePosition
 
 class HomeDashboard extends StatelessWidget {
   const HomeDashboard({super.key});
+
+  // --- Location Service Function (Copied from weather.dart for direct use here) ---
+  /// Determines the current position (latitude and longitude) of the device.
+  /// This function handles permissions and ensures location services are enabled.
+  Future<Position> _determinePosition() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Test if location services are enabled.
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      // Location services are not enabled; don't continue.
+      return Future.error('Location services are disabled.');
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        // Permissions are denied.
+        return Future.error('Location permissions are denied');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      // Permissions are denied forever.
+      return Future.error(
+          'Location permissions are permanently denied, we cannot request permissions.');
+    }
+
+    // Permissions are granted, continue accessing the position of the device.
+    return await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.low, // Low accuracy is fine for dashboard summary
+      timeLimit: const Duration(seconds: 10), // Add a timeout
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -170,7 +207,7 @@ class HomeDashboard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 10),
-                // Weather Card (Reverted to FutureBuilder for async handling)
+                // Weather Card (Now fetches location first)
                 Expanded(
                   child: GestureDetector(
                     onTap: () {
@@ -179,23 +216,41 @@ class HomeDashboard extends StatelessWidget {
                         MaterialPageRoute(builder: (_) => const WeatherPage()),
                       );
                     },
-                    child: FutureBuilder<WeatherData>(
-                      future: getTodayWeatherSummary(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return _buildCard('Weather', subtitle: 'Loading...');
-                        } else if (snapshot.hasError) {
+                    child: FutureBuilder<Position>( // First FutureBuilder to get location
+                      future: _determinePosition(),
+                      builder: (context, locationSnapshot) {
+                        if (locationSnapshot.connectionState == ConnectionState.waiting) {
+                          return _buildCard('Weather', subtitle: 'Getting location...');
+                        } else if (locationSnapshot.hasError) {
                           return _buildCard(
                             'Weather',
-                            subtitle: 'Error: ${snapshot.error}',
+                            subtitle: 'Error: ${locationSnapshot.error}',
                           );
-                        } else if (snapshot.hasData) {
-                          final weatherSummary = snapshot.data!;
-                          return _buildCard(
-                            'Weather',
-                            subtitle:
-                                '${weatherSummary.temperature}°C, ${weatherSummary.condition}',
+                        } else if (locationSnapshot.hasData) {
+                          final Position currentPosition = locationSnapshot.data!;
+                          return FutureBuilder<weather_api.WeatherData>( // Second FutureBuilder to get weather
+                            future: weather_api.getTodayWeatherSummary(
+                              latitude: currentPosition.latitude,
+                              longitude: currentPosition.longitude,
+                            ),
+                            builder: (context, weatherSnapshot) {
+                              if (weatherSnapshot.connectionState == ConnectionState.waiting) {
+                                return _buildCard('Weather', subtitle: 'Loading...');
+                              } else if (weatherSnapshot.hasError) {
+                                return _buildCard(
+                                  'Weather',
+                                  subtitle: 'Error: ${weatherSnapshot.error}',
+                                );
+                              } else if (weatherSnapshot.hasData) {
+                                final weatherSummary = weatherSnapshot.data!;
+                                return _buildCard(
+                                  'Weather',
+                                  subtitle:
+                                      '${weatherSummary.temperature}°C, ${weatherSummary.condition}',
+                                );
+                              }
+                              return _buildCard('Weather', subtitle: 'N/A');
+                            },
                           );
                         }
                         return _buildCard('Weather', subtitle: 'N/A');
@@ -534,14 +589,14 @@ class HomeDashboard extends StatelessWidget {
               child:
                   imageProvider != null
                       ? Image(
-                        image: imageProvider,
-                        height: 100,
-                        width: 130,
-                        fit: BoxFit.cover,
-                        errorBuilder:
-                            (_, __, ___) =>
-                                errorWidget, // Use the common error widget
-                      )
+                          image: imageProvider,
+                          height: 100,
+                          width: 130,
+                          fit: BoxFit.cover,
+                          errorBuilder:
+                              (_, __, ___) =>
+                                  errorWidget, // Use the common error widget
+                        )
                       : errorWidget, // Show error widget if no valid imageProvider
             ),
             const SizedBox(height: 5),
@@ -579,12 +634,12 @@ class HomeDashboard extends StatelessWidget {
             isEmpty
                 ? []
                 : [
-                  const BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 4,
-                    offset: Offset(0, 2),
-                  ),
-                ],
+                    const BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 4,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -647,19 +702,19 @@ Future<List<Widget>> _buildFarmPlantCircles(BuildContext context) async {
           MaterialPageRoute(
             builder:
                 (_) => PlantDetailsPage(
-                  name: plant['name'] ?? 'Unnamed Plant',
-                  imagePath:
-                      plant['imageBase64'] != null
-                          ? 'data:image/jpeg;base64,${plant['imageBase64']}' // Correctly handles base64 image path
-                          : 'assets/plant.png', // Fallback for asset image
-                  growthStatus: 'View Details',
-                  growthPercentage:
-                      0, // Placeholder, actual logic might be needed
-                  harvestDate: plant['maturityDate'] ?? 'Unknown',
-                  gardenName: plant['gardenName'],
-                  container: plant['container'],
-                  category: plant['category'],
-                  plantingDate: plant['plantingDate'],
+                    name: plant['name'] ?? 'Unnamed Plant',
+                    imagePath:
+                        plant['imageBase64'] != null
+                            ? 'data:image/jpeg;base64,${plant['imageBase64']}' // Correctly handles base64 image path
+                            : 'assets/plant.png', // Fallback for asset image
+                    growthStatus: 'View Details',
+                    growthPercentage:
+                        0, // Placeholder, actual logic might be needed
+                    harvestDate: plant['maturityDate'] ?? 'Unknown',
+                    gardenName: plant['gardenName'],
+                    container: plant['container'],
+                    category: plant['category'],
+                    plantingDate: plant['plantingDate'],
                 ),
           ),
         );

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Define a color for your notifications. This can be your app's primary color. -->
+    <color name="ic_notification_color">#4CAF50</color> <!-- Example: Green -->
+</resources>

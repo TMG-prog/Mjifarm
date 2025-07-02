@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:geolocator/geolocator.dart';
+// import 'package:geolocator/geolocator.dart'; // No longer directly used here for getting position
 import 'dart:math';
 
 // --- Data Models ---
@@ -23,56 +23,30 @@ class WeatherData {
 // The '/api' path is based on your Vercel project structure (api/index.js).
 const String _vercelApiBaseUrl = 'https://mjifarms-weather.vercel.app/api';
 
-// --- Location Service Function ---
-
-/// Determines the current position (latitude and longitude) of the device.
-/// This function handles permissions and ensures location services are enabled.
-Future<Position> _determinePosition() async {
-  bool serviceEnabled;
-  LocationPermission permission;
-
-  // Test if location services are enabled.
-  serviceEnabled = await Geolocator.isLocationServiceEnabled();
-  if (!serviceEnabled) {
-    // Location services are not enabled; don't continue.
-    return Future.error('Location services are disabled.');
-  }
-
-  permission = await Geolocator.checkPermission();
-  if (permission == LocationPermission.denied) {
-    permission = await Geolocator.requestPermission();
-    if (permission == LocationPermission.denied) {
-      // Permissions are denied.
-      return Future.error('Location permissions are denied');
-    }
-  }
-
-  if (permission == LocationPermission.deniedForever) {
-    // Permissions are denied forever.
-    return Future.error(
-        'Location permissions are permanently denied, we cannot request permissions.');
-  }
-
-  // Permissions are granted, continue accessing the position of the device.
-  return await Geolocator.getCurrentPosition();
-}
+// --- Location Service Function (No longer needed in this file for fetching) ---
+// The _determinePosition function is now handled by weather_home_page.dart
+// and its result (Position object) is passed to these functions.
+// If you still need location determination *within* this file for other purposes,
+// you would keep this, but for fetching weather, it's redundant here.
 
 // --- API Fetching Functions (via Vercel Serverless Function) ---
 
-/// Fetches current weather data for the device's current location
+/// Fetches current weather data for the provided latitude and longitude
 /// by calling the Vercel Serverless Function.
 ///
+/// [latitude]: The latitude of the location.
+/// [longitude]: The longitude of the location.
 /// Returns a Map<String, dynamic> representing the JSON response from OpenWeatherMap.
-Future<Map<String, dynamic>> fetchCurrentWeatherData() async {
+Future<Map<String, dynamic>> fetchCurrentWeatherData({required double latitude, required double longitude}) async {
   try {
-    Position position = await _determinePosition(); // Get current location
-    final lat = position.latitude;
-    final lon = position.longitude;
+    // Use the provided latitude and longitude directly
+    final lat = latitude;
+    final lon = longitude;
 
     // Construct the URL to call the Vercel Serverless Function
     // Pass latitude, longitude, and 'weather' type as query parameters.
     final vercelUrl = Uri.parse('$_vercelApiBaseUrl?lat=$lat&lon=$lon&type=weather');
-    // print('Calling Vercel API for current weather: $vercelUrl'); // Debugging print
+    print('Calling Vercel API for current weather: $vercelUrl'); // Debugging print
 
     final response = await http.get(vercelUrl);
 
@@ -82,30 +56,32 @@ Future<Map<String, dynamic>> fetchCurrentWeatherData() async {
     } else {
       // If the server returns an error, throw an exception.
       final errorBody = json.decode(response.body);
-      // print('Error fetching current weather from Vercel function: ${response.statusCode} - ${errorBody['error'] ?? response.body}'); // Debugging print
+      print('Error fetching current weather from Vercel function: ${response.statusCode} - ${errorBody['error'] ?? response.body}'); // Debugging print
       throw Exception('Failed to load current weather from Vercel function: ${response.statusCode} ${errorBody['error'] ?? response.body}');
     }
   } catch (e) {
-    // Catch any exceptions during the process (e.g., network error, permission error).
-    // print('Exception in fetchCurrentWeatherData (via Vercel): $e'); // Debugging print
+    // Catch any exceptions during the process (e.g., network error).
+    print('Exception in fetchCurrentWeatherData (via Vercel): $e'); // Debugging print
     rethrow; // Re-throw the exception so calling widgets can handle it.
   }
 }
 
-/// Fetches 5-day / 3-hour forecast data for the device's current location
+/// Fetches 5-day / 3-hour forecast data for the provided latitude and longitude
 /// by calling the Vercel Serverless Function.
 ///
+/// [latitude]: The latitude of the location.
+/// [longitude]: The longitude of the location.
 /// Returns a Map<String, dynamic> representing the JSON response from OpenWeatherMap.
-Future<Map<String, dynamic>> fetchForecastData() async {
+Future<Map<String, dynamic>> fetchForecastData({required double latitude, required double longitude}) async {
   try {
-    Position position = await _determinePosition(); // Get current location
-    final lat = position.latitude;
-    final lon = position.longitude;
+    // Use the provided latitude and longitude directly
+    final lat = latitude;
+    final lon = longitude;
 
     // Construct the URL to call the Vercel Serverless Function
     // Pass latitude, longitude, and 'forecast' type as query parameters.
     final vercelUrl = Uri.parse('$_vercelApiBaseUrl?lat=$lat&lon=$lon&type=forecast');
-    // print('Calling Vercel API for forecast: $vercelUrl'); // Debugging print
+    print('Calling Vercel API for forecast: $vercelUrl'); // Debugging print
 
     final response = await http.get(vercelUrl);
 
@@ -115,12 +91,12 @@ Future<Map<String, dynamic>> fetchForecastData() async {
     } else {
       // If the server returns an error, throw an exception.
       final errorBody = json.decode(response.body);
-      // print('Error fetching forecast from Vercel function: ${response.statusCode} - ${errorBody['error'] ?? response.body}'); // Debugging print
+      print('Error fetching forecast from Vercel function: ${response.statusCode} - ${errorBody['error'] ?? response.body}'); // Debugging print
       throw Exception('Failed to load forecast from Vercel function: ${response.statusCode} ${errorBody['error'] ?? response.body}');
     }
   } catch (e) {
     // Catch any exceptions during the process.
-    // print('Exception in fetchForecastData (via Vercel): $e'); // Debugging print
+    print('Exception in fetchForecastData (via Vercel): $e'); // Debugging print
     rethrow;
   }
 }
@@ -140,12 +116,13 @@ WeatherData getSimplifiedDailyWeatherSummary(Map<String, dynamic> weatherData) {
 
 /// A convenience function to get today's weather summary directly.
 /// Handles potential errors and returns a default [WeatherData] in case of failure.
-Future<WeatherData> getTodayWeatherSummary() async {
+/// This function now requires latitude and longitude.
+Future<WeatherData> getTodayWeatherSummary({required double latitude, required double longitude}) async {
   try {
-    final weatherJson = await fetchCurrentWeatherData();
+    final weatherJson = await fetchCurrentWeatherData(latitude: latitude, longitude: longitude);
     return getSimplifiedDailyWeatherSummary(weatherJson);
   } catch (e) {
-    // print('Failed to get today\'s weather summary: $e'); // Debugging print
+    print('Failed to get today\'s weather summary: $e'); // Debugging print
     // Return a default error state
     return WeatherData(temperature: 'N/A', condition: 'Error', iconCode: '01d');
   }

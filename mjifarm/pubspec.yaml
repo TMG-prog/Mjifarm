@@ -63,6 +63,7 @@ dependencies:
   flutter_ui_auth: ^1.0.0
   firebase_ui_auth: ^1.14.0
   google_sign_in: ^6.3.0
+  firebase_messaging: ^14.9.4
 
 dev_dependencies:
   flutter_test:

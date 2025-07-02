@@ -1,11 +1,28 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required for network access for Firebase and weather API -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- Permissions for Location (already present, good for weather) -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
+    <!-- Permissions for File Management/Storage (already present, good for report downloading) -->
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+
+    <!-- Permission for Camera (already present) -->
     <uses-permission android:name="android.permission.CAMERA"/>
-    
+
+    <!-- NEW: Required for Android 13+ to show notifications -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+    <!-- NEW (Optional but Recommended): For receiving messages after device reboot -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+
+    <!-- NEW (Optional but Recommended): For notification vibration -->
+    <uses-permission android:name="android.permission.VIBRATE"/>
+
 
     <application
         android:label="mjifarm"
@@ -39,6 +56,27 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- NEW (Optional but Recommended): Default notification icon and color -->
+        <!-- Create these drawable and color resources in res/drawable/ and res/values/ respectively -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/ic_notification_color" />
+
+        <!-- NEW: Firebase Messaging Service declaration -->
+        <!-- This service is crucial for FCM to receive messages. -->
+        <!-- It's often automatically merged by Gradle, but explicitly declaring it ensures presence. -->
+        <service
+            android:name="com.google.firebase.messaging.FirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
