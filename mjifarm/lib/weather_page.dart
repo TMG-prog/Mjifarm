@@ -1,4 +1,4 @@
-// lib/pages/weather_home_page.dart
+// lib/pages/weather_page.dart
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http; // For sending FCM token to backend
@@ -27,9 +27,7 @@ class _WeatherPageState extends State<WeatherPage> {
   // --- IMPORTANT: Replace with your actual backend API endpoint ---
   // This is where your server will receive and store the FCM tokens.
   static const String _backendApiEndpoint =
-      'https://mjifarms-weather.vercel.app/api'; // Changed to just /api as /api/index.js is the default handler for POST
-  // Example for a local test server: 'http://10.0.2.2:3000/registerFcmToken' (for Android emulator)
-  // Example for a deployed server: 'https://api.yourdomain.com/registerFcmToken'
+      'https://mjifarms-weather.vercel.app/api';
 
   @override
   void initState() {
@@ -38,6 +36,42 @@ class _WeatherPageState extends State<WeatherPage> {
     // We call both, but ensure FCM token sending with location happens after _currentPosition is set.
     _fetchWeatherData();
     _configureFirebaseMessaging(); // Setup FCM listeners and token sending
+  }
+
+  // --- Location Service Function ---
+  /// Determines the current position (latitude and longitude) of the device.
+  /// This function handles permissions and ensures location services are enabled.
+  Future<Position> _determinePosition() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Test if location services are enabled.
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      // Location services are not enabled; don't continue.
+      return Future.error('Location services are disabled.');
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        // Permissions are denied.
+        return Future.error('Location permissions are denied');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      // Permissions are denied forever.
+      return Future.error(
+          'Location permissions are permanently denied, we cannot request permissions.');
+    }
+
+    // Permissions are granted, continue accessing the position of the device.
+    return await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high, // High accuracy for weather
+      timeLimit: const Duration(seconds: 15), // Timeout for getting location
+    );
   }
 
   // --- Location and Weather Fetching Logic ---
@@ -49,27 +83,7 @@ class _WeatherPageState extends State<WeatherPage> {
 
     try {
       // 1. Get Location Permissions and Current Position
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        throw Exception('Location services are disabled. Please enable them in your device settings.');
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          throw Exception('Location permissions are denied. Please grant permission for the app to function.');
-        }
-      }
-      if (permission == LocationPermission.deniedForever) {
-        throw Exception('Location permissions are permanently denied. Please enable them in your app settings.');
-      }
-
-      // If permissions are granted, get the current position
-      _currentPosition = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high, // High accuracy for weather
-        timeLimit: const Duration(seconds: 15), // Timeout for location
-      );
+      _currentPosition = await _determinePosition();
       print('Fetched device location: Lat ${_currentPosition!.latitude}, Lon ${_currentPosition!.longitude}');
 
 
@@ -563,11 +577,15 @@ class _WeatherPageState extends State<WeatherPage> {
       ),
       subtitle: Text(condition, maxLines: 1, overflow: TextOverflow.ellipsis),
       trailing: Column(
+        // This is the column that holds high/low/rain info
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize:
+            MainAxisSize
+                .min, // Ensure the column takes minimum horizontal space
         children: [
           Text(
+            // COMBINED HIGH AND LOW TEMPERATURES ON ONE LINE
             '$high / $low',
             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             maxLines: 1,
@@ -744,7 +762,7 @@ class _WeatherPageState extends State<WeatherPage> {
                         },
                       ),
                       const SizedBox(height: 20),
-                      
+                     
                     ],
                   ),
                 ),
