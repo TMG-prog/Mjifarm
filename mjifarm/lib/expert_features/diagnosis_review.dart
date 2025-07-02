@@ -16,12 +16,11 @@ class DiagnosisReviewContent extends StatefulWidget {
 
 class _DiagnosisReviewContentState extends State<DiagnosisReviewContent> {
   late DatabaseReference _cropLogsRef;
-  List<Map<String, dynamic>> _diagnoses = [];
+  List<Map<String, dynamic>> _allDiagnoses = []; // Renamed for clarity
+  List<Map<String, dynamic>> _pendingDiagnoses = []; // NEW: List for pending diagnoses
   bool _isLoading = true;
 
-
   final String _vercelImageProxyBaseUrl = 'https://mjifarms-images.vercel.app/api';
-
 
   @override
   void initState() {
@@ -34,7 +33,8 @@ class _DiagnosisReviewContentState extends State<DiagnosisReviewContent> {
     _cropLogsRef.onValue.listen(
       (event) {
         final data = event.snapshot.value;
-        final List<Map<String, dynamic>> fetchedDiagnoses = [];
+        final List<Map<String, dynamic>> fetchedAllDiagnoses = [];
+        final List<Map<String, dynamic>> fetchedPendingDiagnoses = []; // NEW
         if (data != null && data is Map) {
           data.forEach((cropLogId, cropLogValue) {
             if (cropLogValue is Map &&
@@ -43,18 +43,25 @@ class _DiagnosisReviewContentState extends State<DiagnosisReviewContent> {
               Map<dynamic, dynamic> diagnosesMap = Map<dynamic, dynamic>.from(cropLogValue['diagnoses']);
               diagnosesMap.forEach((diagId, diagValue) {
                 if (diagValue is Map) {
-                  fetchedDiagnoses.add({
+                  final diagnosis = {
                     'id': diagId,
                     'cropLogId': cropLogId,
                     ...Map<String, dynamic>.from(diagValue),
-                  });
+                  };
+                  fetchedAllDiagnoses.add(diagnosis);
+
+                  // NEW: Check for pending status
+                  if (diagnosis['reviewStatus'] == 'pending_expert_review') {
+                    fetchedPendingDiagnoses.add(diagnosis);
+                  }
                 }
               });
             }
           });
         }
         setState(() {
-          _diagnoses = fetchedDiagnoses;
+          _allDiagnoses = fetchedAllDiagnoses;
+          _pendingDiagnoses = fetchedPendingDiagnoses; // NEW: Update pending list
           _isLoading = false;
         });
       },
@@ -95,6 +102,7 @@ class _DiagnosisReviewContentState extends State<DiagnosisReviewContent> {
     } else {
       // Assume it's a Base64 string (if your Vercel function decided to send it that way directly)
       try {
+        // Handle potential "data:image/jpeg;base64," prefix
         final String base64String = rawPlantIdImageUrl.contains(',') ? rawPlantIdImageUrl.split(',').last : rawPlantIdImageUrl;
         return MemoryImage(base64Decode(base64String));
       } catch (e) {
@@ -104,50 +112,41 @@ class _DiagnosisReviewContentState extends State<DiagnosisReviewContent> {
     }
   }
 
-  Future<void> _handleReview(String diagnosisId) async {
-    Map<String, dynamic>? specificDiagnosis;
-    for (var diag in _diagnoses) {
-      if (diag['id'] == diagnosisId) {
-        specificDiagnosis = diag;
-        break;
-      }
-    }
+  Future<void> _handleReview(Map<String, dynamic> diagnosis) async {
+    final String diagnosisId = diagnosis['id'];
+    final String cropLogId = diagnosis['cropLogId'];
 
-    if (specificDiagnosis == null) {
-      _showSnackBar('Diagnosis with ID "$diagnosisId" not found.', Colors.red);
-      return;
-    }
-
-    String pestOrDisease = specificDiagnosis['pestOrDisease'] ?? 'N/A';
-    double confidenceLevel = (specificDiagnosis['confidenceLevel'] as num?)?.toDouble() ?? 0.0;
-    String diagnosisDate = specificDiagnosis['date'] != null
-        ? DateTime.fromMillisecondsSinceEpoch(specificDiagnosis['date']).toLocal().toString().split(' ')[0]
+    String pestOrDisease = diagnosis['pestOrDisease'] ?? 'N/A';
+    double confidenceLevel = (diagnosis['confidenceLevel'] as num?)?.toDouble() ?? 0.0;
+    String diagnosisDate = diagnosis['date'] != null
+        ? DateTime.fromMillisecondsSinceEpoch(diagnosis['date']).toLocal().toString().split(' ')[0]
         : 'N/A';
-    List<dynamic> recommendationsRaw = specificDiagnosis['recommendations'] ?? [];
+    List<dynamic> recommendationsRaw = diagnosis['recommendations'] ?? [];
 
     List<String> rawApiResponse = [];
-    final dynamic rawApiData = specificDiagnosis['rawApiResponse'];
+    final dynamic rawApiData = diagnosis['rawApiResponse'];
     if (rawApiData != null) {
       if (rawApiData is Map) {
-        rawApiResponse = List<String>.from(rawApiData.values.map((e) => e.toString()));
+        // Convert map values to string if rawApiResponse is a map
+        rawApiResponse = rawApiData.entries.map((entry) => '${entry.key}: ${entry.value}').toList();
       } else if (rawApiData is Iterable) {
         rawApiResponse = List<String>.from(rawApiData.map((e) => e.toString()));
+      } else if (rawApiData is String) {
+        rawApiResponse = [rawApiData];
       }
     }
 
-    // Related Disease Images need separate handling if they are URLs or Base64
     List<String> relatedDiseaseImages = [];
-    final dynamic relatedImagesData = specificDiagnosis['relatedDiseasesImages']; // Ensure this key is correct
+    final dynamic relatedImagesData = diagnosis['relatedDiseaseImages']; // Ensure this key is correct
     if (relatedImagesData != null) {
       if (relatedImagesData is Iterable) {
-        // Assume these are URLs or Base64 strings. If they are URLs, they also need proxying.
         relatedDiseaseImages = List<String>.from(relatedImagesData.map((e) => e.toString()));
       } else if (relatedImagesData is String && (relatedImagesData.startsWith('http') || relatedImagesData.startsWith('data:image'))) {
-        relatedDiseaseImages = [relatedImagesData]; // If it's a single string
+        relatedDiseaseImages = [relatedImagesData];
       }
     }
 
-    String diagnosisResult = specificDiagnosis['pestOrDisease']?.toString() ?? 'N/A';
+    String diagnosisResult = diagnosis['pestOrDisease']?.toString() ?? 'N/A';
 
     List<String> recommendations = List<String>.from(
       recommendationsRaw.map((rec) => rec.toString()),
@@ -167,6 +166,7 @@ class _DiagnosisReviewContentState extends State<DiagnosisReviewContent> {
     try {
       String reportContent = "--- Plant Diagnosis Report ---\n\n";
       reportContent += "Diagnosis ID: $diagnosisId\n";
+      reportContent += "Crop Log ID: $cropLogId\n"; // Include cropLogId
       reportContent += "Diagnosis Date: $diagnosisDate\n";
       reportContent += "Report Generated Date: ${DateTime.now().toLocal().toString().split(' ')[0]}\n";
       reportContent += "Report Generated Time: ${DateTime.now().toLocal().toString().split(' ')[1].substring(0, 8)}\n\n";
@@ -191,11 +191,6 @@ class _DiagnosisReviewContentState extends State<DiagnosisReviewContent> {
       reportContent += "Related Disease Images (URLs) - Proxied through Vercel:\n";
       if (relatedDiseaseImages.isNotEmpty) {
         for (int i = 0; i < relatedDiseaseImages.length; i++) {
-          // IMPORTANT: If 'relatedDiseaseImages' also contain Plant.ID URLs,
-          // you would also need to proxy them here when generating the report text.
-          // For now, assuming they are direct URLs that might not load in the report file if CORS is strict.
-          // If you want them to be accessible in the generated report, you might need to
-          // include the Vercel proxy URL for them too in the report text.
           final String proxiedImageUrl = (relatedDiseaseImages[i].startsWith('http://') || relatedDiseaseImages[i].startsWith('https://'))
               ? Uri.parse(_vercelImageProxyBaseUrl).replace(queryParameters: {'url': relatedDiseaseImages[i]}).toString()
               : 'N/A (not a URL)'; // Or handle Base64 for related images too
@@ -208,7 +203,6 @@ class _DiagnosisReviewContentState extends State<DiagnosisReviewContent> {
 
       reportContent += "Raw API Response Snippet (First 500 chars):\n";
       if (rawApiResponse.isNotEmpty) {
-        // Just print a snippet of the raw API response to keep report concise
         reportContent += rawApiResponse.join('\n').substring(0, rawApiResponse.join('\n').length.clamp(0, 500)) + '...\n';
       } else {
         reportContent += "No raw API response data found or was empty.\n";
@@ -236,6 +230,29 @@ class _DiagnosisReviewContentState extends State<DiagnosisReviewContent> {
     } catch (e) {
       print('Error generating report: $e');
       _showSnackBar('Error generating report: $e', Colors.red);
+    }
+  }
+
+  // NEW: Function to mark a diagnosis as reviewed
+  Future<void> _markAsReviewed(String cropLogId, String diagnosisId) async {
+    try {
+      final DatabaseReference diagnosisRef = FirebaseDatabase.instance
+          .ref('crop_logs')
+          .child(cropLogId)
+          .child('diagnoses')
+          .child(diagnosisId);
+
+      await diagnosisRef.update({
+        'reviewStatus': 'reviewed',
+        'reviewedAt': ServerValue.timestamp, // Add a timestamp for when it was reviewed
+        // You might also add the expert's UID here:
+        // 'reviewedBy': FirebaseAuth.instance.currentUser?.uid,
+      });
+
+      _showSnackBar('Diagnosis marked as reviewed!', Colors.green);
+    } catch (e) {
+      print('Error marking diagnosis as reviewed: $e');
+      _showSnackBar('Failed to mark as reviewed: $e', Colors.red);
     }
   }
 
@@ -270,14 +287,21 @@ class _DiagnosisReviewContentState extends State<DiagnosisReviewContent> {
                     ).textTheme.bodyLarge?.copyWith(color: Colors.grey.shade700),
                   ),
                   const SizedBox(height: 24),
-                  _diagnoses.isEmpty
-                      ? const Center(
-                          child: Text(
-                            'No diagnoses found.',
-                            style: TextStyle(fontSize: 16, color: Colors.grey),
-                          ),
-                        )
-                      : GridView.builder(
+
+                  // --- NEW: Pending Diagnoses Section ---
+                  if (_pendingDiagnoses.isNotEmpty)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Pending Diagnoses (${_pendingDiagnoses.length})',
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.orange.shade800,
+                              ),
+                        ),
+                        const SizedBox(height: 16),
+                        GridView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -287,35 +311,26 @@ class _DiagnosisReviewContentState extends State<DiagnosisReviewContent> {
                                     : (MediaQuery.of(context).size.width > 600 ? 2 : 1),
                             crossAxisSpacing: 24,
                             mainAxisSpacing: 24,
-                            childAspectRatio: 0.8,
+                            childAspectRatio: 0.95, // Adjusted for buttons
                           ),
-                          itemCount: _diagnoses.length,
+                          itemCount: _pendingDiagnoses.length,
                           itemBuilder: (context, index) {
-                            final diag = _diagnoses[index];
-
+                            final diag = _pendingDiagnoses[index];
                             String pestOrDisease = diag['pestOrDisease'] ?? 'N/A';
-                            double confidenceLevel =
-                                (diag['confidenceLevel'] as num?)?.toDouble() ?? 0.0;
-                            String date =
-                                diag['date'] != null
-                                    ? DateTime.fromMillisecondsSinceEpoch(
-                                          diag['date'],
-                                        ).toLocal().toString().split(' ')[0]
-                                    : 'N/A';
-                            List<dynamic> recommendationsRaw =
-                                diag['recommendations'] ?? [];
+                            double confidenceLevel = (diag['confidenceLevel'] as num?)?.toDouble() ?? 0.0;
+                            String date = diag['date'] != null
+                                ? DateTime.fromMillisecondsSinceEpoch(diag['date']).toLocal().toString().split(' ')[0]
+                                : 'N/A';
+                            List<dynamic> recommendationsRaw = diag['recommendations'] ?? [];
                             List<String> recommendations = List<String>.from(
                               recommendationsRaw.map((rec) => rec.toString()),
                             );
-                            
-                            // Extract originalImageString from the nested structure
+
                             final dynamic rawApiData = diag['rawApiResponse'];
                             String? originalImageString;
                             if (rawApiData is Map && rawApiData['input'] is Map && rawApiData['input']['images'] is List && rawApiData['input']['images'].isNotEmpty) {
                               originalImageString = rawApiData['input']['images'][0] as String?;
                             }
-
-                            // Use the new helper function with the Plant.ID URL (which will be proxied)
                             final ImageProvider? imageProvider = _getDiagnosisImageProvider(originalImageString);
 
                             var plantName = diag['plantName'] ?? 'Unknown Plant';
@@ -401,10 +416,203 @@ class _DiagnosisReviewContentState extends State<DiagnosisReviewContent> {
                                       ),
                                     ),
                                     const SizedBox(height: 12),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                      children: [
+                                        Expanded(
+                                          child: ElevatedButton.icon(
+                                            onPressed: () => _handleReview(diag),
+                                            icon: const Icon(Icons.visibility),
+                                            label: const Text('Report'),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.green.shade600,
+                                              foregroundColor: Colors.white,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              padding: const EdgeInsets.symmetric(vertical: 8),
+                                              textStyle: const TextStyle(fontSize: 12),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: ElevatedButton.icon(
+                                            onPressed: () => _markAsReviewed(diag['cropLogId'], diag['id']),
+                                            icon: const Icon(Icons.check_circle_outline),
+                                            label: const Text('Reviewed'),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.blue.shade600,
+                                              foregroundColor: Colors.white,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              padding: const EdgeInsets.symmetric(vertical: 8),
+                                              textStyle: const TextStyle(fontSize: 12),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 48), // Space before All Diagnoses
+                      ],
+                    ),
+                  // --- END NEW: Pending Diagnoses Section ---
+
+                  Text(
+                    'All Diagnoses (${_allDiagnoses.length})',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green.shade800,
+                        ),
+                  ),
+                  const SizedBox(height: 16),
+                  _allDiagnoses.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'No diagnoses found.',
+                            style: TextStyle(fontSize: 16, color: Colors.grey),
+                          ),
+                        )
+                      : GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount:
+                                MediaQuery.of(context).size.width > 900
+                                    ? 3
+                                    : (MediaQuery.of(context).size.width > 600 ? 2 : 1),
+                            crossAxisSpacing: 24,
+                            mainAxisSpacing: 24,
+                            childAspectRatio: 0.95, // Adjusted for consistency
+                          ),
+                          itemCount: _allDiagnoses.length,
+                          itemBuilder: (context, index) {
+                            final diag = _allDiagnoses[index];
+
+                            String pestOrDisease = diag['pestOrDisease'] ?? 'N/A';
+                            double confidenceLevel = (diag['confidenceLevel'] as num?)?.toDouble() ?? 0.0;
+                            String date = diag['date'] != null
+                                ? DateTime.fromMillisecondsSinceEpoch(diag['date']).toLocal().toString().split(' ')[0]
+                                : 'N/A';
+                            List<dynamic> recommendationsRaw = diag['recommendations'] ?? [];
+                            List<String> recommendations = List<String>.from(
+                              recommendationsRaw.map((rec) => rec.toString()),
+                            );
+                            
+                            // Extract originalImageString from the nested structure
+                            final dynamic rawApiData = diag['rawApiResponse'];
+                            String? originalImageString;
+                            if (rawApiData is Map && rawApiData['input'] is Map && rawApiData['input']['images'] is List && rawApiData['input']['images'].isNotEmpty) {
+                              originalImageString = rawApiData['input']['images'][0] as String?;
+                            }
+                            final ImageProvider? imageProvider = _getDiagnosisImageProvider(originalImageString);
+
+                            var plantName = diag['plantName'] ?? 'Unknown Plant';
+                            var reviewStatus = diag['reviewStatus'] ?? 'none'; // Get review status
+
+                            return Card(
+                              elevation: 4,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15),
+                                // Highlight pending items
+                                side: reviewStatus == 'pending_expert_review'
+                                    ? const BorderSide(color: Colors.orange, width: 2)
+                                    : BorderSide.none,
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: imageProvider != null
+                                          ? Image(
+                                              image: imageProvider,
+                                              height: 120,
+                                              width: double.infinity,
+                                              fit: BoxFit.cover,
+                                              errorBuilder:
+                                                  (context, error, stackTrace) => Container(
+                                                    height: 120,
+                                                    color: Colors.grey[200],
+                                                    child: const Center(
+                                                      child: Icon(
+                                                        Icons.broken_image,
+                                                        color: Colors.grey,
+                                                        size: 40,
+                                                      ),
+                                                    ),
+                                                  ),
+                                            )
+                                          : Container(
+                                              height: 120,
+                                              color: Colors.grey[200],
+                                              child: const Center(
+                                                child: Icon(
+                                                  Icons.image_not_supported,
+                                                  color: Colors.grey,
+                                                  size: 40,
+                                                ),
+                                              ),
+                                            ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      pestOrDisease,
+                                      style: Theme.of(context).textTheme.titleLarge
+                                          ?.copyWith(fontWeight: FontWeight.bold),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Plant: $plantName',
+                                      style: Theme.of(context).textTheme.bodyMedium
+                                          ?.copyWith(color: Colors.grey.shade700),
+                                    ),
+                                    Text(
+                                      'Confidence: ${confidenceLevel.toStringAsFixed(2)}%',
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodySmall?.copyWith(
+                                            fontStyle: FontStyle.italic,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                    ),
+                                    Text(
+                                      'Date: $date',
+                                      style: Theme.of(context).textTheme.bodySmall
+                                          ?.copyWith(color: Colors.grey.shade600),
+                                    ),
+                                    Text(
+                                      'Status: ${reviewStatus == 'pending_expert_review' ? 'Pending Review' : (reviewStatus == 'reviewed' ? 'Reviewed' : 'Not Reviewed')}',
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: reviewStatus == 'pending_expert_review' ? Colors.orange.shade700 : Colors.grey.shade600,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Flexible(
+                                      child: Text(
+                                        'Recommendations: ${recommendations.join(', ')}',
+                                        style: Theme.of(context).textTheme.bodySmall,
+                                        maxLines: 3,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
                                     Align(
                                       alignment: Alignment.center,
                                       child: ElevatedButton.icon(
-                                        onPressed: () => _handleReview(diag['id']),
+                                        onPressed: () => _handleReview(diag),
                                         icon: const Icon(Icons.visibility),
                                         label: const Text('View Report'),
                                         style: ElevatedButton.styleFrom(

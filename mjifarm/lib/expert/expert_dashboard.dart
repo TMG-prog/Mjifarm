@@ -16,7 +16,8 @@ class ExpertDashboardScreen extends StatefulWidget {
 
 class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
   User? _currentUser;
-  int _diagnosisCount=0;
+  int _totalDiagnosisCount = 0; // Renamed for clarity
+  int _pendingDiagnosisCount = 0; // New variable for pending diagnoses
   bool _isLoading = true;
   final DatabaseReference _cropLogsRef = FirebaseDatabase.instance.ref(
     'crop_logs',
@@ -26,14 +27,29 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
   void initState() {
     super.initState();
     _currentUser = FirebaseAuth.instance.currentUser;
-    _fetchDiagnosesCount();
+    // Listen for auth state changes to ensure _currentUser is always up-to-date
+    FirebaseAuth.instance.authStateChanges().listen((User? user) {
+      if (user != null && _currentUser?.uid != user.uid) {
+        setState(() {
+          _currentUser = user;
+        });
+        _fetchDiagnosesCount(); // Re-fetch if user changes (e.g., after login/logout)
+      } else if (user == null && _currentUser != null) {
+        setState(() {
+          _currentUser = null;
+        });
+        _fetchDiagnosesCount(); // Re-fetch if user logs out
+      }
+    });
+    _fetchDiagnosesCount(); // Initial fetch
   }
 
   Future<void> _fetchDiagnosesCount() async {
     setState(() {
       _isLoading = true;
     });
-    int count = 0;
+    int totalCount = 0;
+    int pendingCount = 0;
     try {
       DataSnapshot cropLogsSnapshot = await _cropLogsRef.get();
       if (cropLogsSnapshot.exists && cropLogsSnapshot.value is Map) {
@@ -44,17 +60,23 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
             Map<dynamic, dynamic> diagnosesMap = cropLogValue['diagnoses'];
             diagnosesMap.forEach((diagId, diagValue) {
               if (diagValue is Map) {
-                count++;
+                totalCount++; // Increment total count
+                // --- MODIFIED: Check for 'reviewStatus' and 'pending_expert_review' ---
+                if (diagValue['reviewStatus'] == 'pending_expert_review') {
+                  pendingCount++;
+                }
+                // --- END MODIFIED ---
               }
             });
           }
         });
       }
     } catch (e) {
-      print("Error fetching  diagnoses count: $e");
+      print("Error fetching diagnoses count: $e");
     } finally {
       setState(() {
-        _diagnosisCount = count;
+        _totalDiagnosisCount = totalCount;
+        _pendingDiagnosisCount = pendingCount; // Set the pending count
         _isLoading = false;
       });
     }
@@ -72,7 +94,6 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Expert Dashboard'),
-
         actions: [
           IconButton(
             //sign out button
@@ -116,10 +137,9 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.pending_actions),
-              title: Text('Diagnoses ($_diagnosisCount)'),
+              title: Text('Diagnoses ($_pendingDiagnosisCount pending)'), // Show pending count here
               onTap: () {
                 Navigator.pop(context);
-                
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => DiagnosisReviewContent(),
@@ -173,9 +193,9 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
             Text(
               'Expert Overview',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Colors.green.shade800,
-              ),
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green.shade800,
+                  ),
             ),
             const SizedBox(height: 24),
             GridView.count(
@@ -190,8 +210,8 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
               children: [
                 _buildExpertCard(
                   context,
-                  ' Diagnoses',
-                  _diagnosisCount.toString(),
+                  'Diagnoses',
+                  '$_pendingDiagnosisCount pending', // Display pending count in the card
                   Icons.pending_actions,
                   Colors.orange,
                   () {
@@ -263,7 +283,7 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
   Widget _buildExpertCard(
     BuildContext context,
     String title,
-    String value,
+    String value, // This will now hold "X pending"
     IconData icon,
     Color color,
     VoidCallback onTap,
@@ -289,7 +309,7 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
               const SizedBox(height: 8),
               Text(title, style: Theme.of(context).textTheme.titleSmall),
               Text(
-                value,
+                value, // This will display "X pending"
                 style: Theme.of(
                   context,
                 ).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.bold),

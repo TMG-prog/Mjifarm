@@ -108,7 +108,7 @@ class PestDetailsPage extends StatelessWidget {
                 icon: const Icon(Icons.check_circle_outline),
                 label: const Text('Mark as Reviewed'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.greenAccent,
+                  backgroundColor: Colors.green,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   shape: RoundedRectangleBorder(
