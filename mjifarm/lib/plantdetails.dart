@@ -147,7 +147,7 @@ class PlantDetailsPage extends StatelessWidget {
             backgroundColor: Colors.green.shade100,
             child: Icon(icon, size: 28, color: Colors.green.shade800),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 10),
           Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
           Text(label, style: TextStyle(color: Colors.grey[600])),
         ],

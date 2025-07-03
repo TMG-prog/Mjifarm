@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:mjifarm/report.dart';
 
 class FarmerProfilePage extends StatefulWidget {
   const FarmerProfilePage({super.key});
@@ -28,9 +29,11 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
   late TextEditingController _phoneController;
   late TextEditingController _locationController;
   late TextEditingController _farmingTypeController;
-  final TextEditingController _imageBase64Controller = TextEditingController(); // Holds the Base64 string
+  final TextEditingController _imageBase64Controller =
+      TextEditingController(); // Holds the Base64 string
 
-  String? _previewImageBase64; // To hold the Base64 for the current preview image
+  String?
+  _previewImageBase64; // To hold the Base64 for the current preview image
   final ImagePicker _picker = ImagePicker(); // ImagePicker instance
 
   @override
@@ -70,21 +73,31 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
     farmersRef.onValue.listen(
       (event) {
         final dataSnapshot = event.snapshot;
-        if (dataSnapshot.exists && dataSnapshot.value != null && dataSnapshot.value is Map) {
-          final Map<dynamic, dynamic> profileData = Map<dynamic, dynamic>.from(dataSnapshot.value as Map);
+        if (dataSnapshot.exists &&
+            dataSnapshot.value != null &&
+            dataSnapshot.value is Map) {
+          final Map<dynamic, dynamic> profileData = Map<dynamic, dynamic>.from(
+            dataSnapshot.value as Map,
+          );
 
           setState(() {
-            _nameController.text = profileData['name']?.toString() ?? user?.displayName ?? '';
-            _emailController.text = profileData['email']?.toString() ?? user?.email ?? '';
+            _nameController.text =
+                profileData['name']?.toString() ?? user?.displayName ?? '';
+            _emailController.text =
+                profileData['email']?.toString() ?? user?.email ?? '';
             _phoneController.text = profileData['phone']?.toString() ?? '';
-            _locationController.text = profileData['location']?.toString() ?? '';
-            _farmingTypeController.text = profileData['farmingType']?.toString() ?? '';
+            _locationController.text =
+                profileData['location']?.toString() ?? '';
+            _farmingTypeController.text =
+                profileData['farmingType']?.toString() ?? '';
 
             final String? fetchedImageBase64 = profileData['image']?.toString();
             if (fetchedImageBase64 != null && fetchedImageBase64.isNotEmpty) {
               _previewImageBase64 = fetchedImageBase64;
-              _imageBase64Controller.text = fetchedImageBase64; // Keep controller updated for saving
-              _isImageUploaded = true; // Set to true if an image is loaded from DB
+              _imageBase64Controller.text =
+                  fetchedImageBase64; // Keep controller updated for saving
+              _isImageUploaded =
+                  true; // Set to true if an image is loaded from DB
             } else {
               _previewImageBase64 = null;
               _imageBase64Controller.text = '';
@@ -105,7 +118,9 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
             _isImageUploaded = false; // No image, so fields are enabled
             _isLoading = false;
           });
-          print("No existing profile data found for ${user?.uid}. Initializing empty fields.");
+          print(
+            "No existing profile data found for ${user?.uid}. Initializing empty fields.",
+          );
         }
       },
       onError: (error) {
@@ -138,13 +153,12 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
     final String currentImageBase64 = _imageBase64Controller.text.trim();
 
     try {
-     
       if (user!.displayName != currentName) {
         await user!.updateDisplayName(currentName);
       }
-     
 
-      await farmersRef.update({ // Use .set() if you want to overwrite, .update() if you want to merge
+      await farmersRef.update({
+        // Use .set() if you want to overwrite, .update() if you want to merge
         "name": currentName,
         "email": currentEmail, // Store email here as well
         'phone': currentPhone,
@@ -171,9 +185,9 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
         final bytes = await pickedFile.readAsBytes();
         final base64String = base64Encode(bytes);
         setState(() {
-          _imageBase64Controller.text = base64String; 
-          _previewImageBase64 = base64String; 
-          _isImageUploaded = true; 
+          _imageBase64Controller.text = base64String;
+          _previewImageBase64 = base64String;
+          _isImageUploaded = true;
         });
         _showSnackBar('Image selected and converted to Base64.', Colors.green);
       } catch (e) {
@@ -229,27 +243,29 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: Colors.grey.shade300),
                       ),
-                      child: (_previewImageBase64 != null &&
-                               _previewImageBase64!.isNotEmpty)
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: Image.memory(
-                                base64Decode(_previewImageBase64!),
-                                fit: BoxFit.cover,
-                                errorBuilder:
-                                    (context, error, stackTrace) =>
-                                        const Icon(
-                                          Icons.broken_image,
-                                          size: 50,
-                                          color: Colors.grey,
-                                        ),
+                      child:
+                          (_previewImageBase64 != null &&
+                                  _previewImageBase64!.isNotEmpty)
+                              ? ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: Image.memory(
+                                  base64Decode(_previewImageBase64!),
+                                  fit: BoxFit.cover,
+                                  errorBuilder:
+                                      (context, error, stackTrace) =>
+                                          const Icon(
+                                            Icons.broken_image,
+                                            size: 50,
+                                            color: Colors.grey,
+                                          ),
+                                ),
+                              )
+                              : const Icon(
+                                Icons
+                                    .person, // Changed from Icons.image to person for profile picture
+                                size: 50,
+                                color: Colors.grey,
                               ),
-                            )
-                          : const Icon(
-                              Icons.person, // Changed from Icons.image to person for profile picture
-                              size: 50,
-                              color: Colors.grey,
-                            ),
                     ),
                     const SizedBox(width: 20),
                     Expanded(
@@ -273,11 +289,12 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                         
+
                           TextFormField(
                             controller: _imageBase64Controller,
                             maxLines: 2, // Keep it compact
-                            readOnly: true, // Make it read-only as it's filled by the picker
+                            readOnly:
+                                true, // Make it read-only as it's filled by the picker
                             decoration: InputDecoration(
                               labelText: 'Profile Image (Base64)',
                               border: OutlineInputBorder(
@@ -299,21 +316,23 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
 
                 TextFormField(
                   controller: _nameController,
-                  readOnly: _isImageUploaded, // This line disables if image uploaded
+                  readOnly:
+                      _isImageUploaded, // This line disables if image uploaded
                   decoration: const InputDecoration(
                     labelText: 'Name',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.all(Radius.circular(10)),
                     ),
                   ),
-                  validator: (val) =>
-                      val == null || val.isEmpty ? 'Enter your name' : null,
+                  validator:
+                      (val) =>
+                          val == null || val.isEmpty ? 'Enter your name' : null,
                 ),
                 const SizedBox(height: 10),
 
                 TextFormField(
                   controller: _emailController,
-                  readOnly: true, 
+                  readOnly: true,
                   decoration: const InputDecoration(
                     labelText: 'Email',
                     border: OutlineInputBorder(
@@ -321,8 +340,11 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
                     ),
                   ),
                   keyboardType: TextInputType.emailAddress,
-                  validator: (val) =>
-                      val == null || !val.contains('@') ? 'Enter valid email' : null,
+                  validator:
+                      (val) =>
+                          val == null || !val.contains('@')
+                              ? 'Enter valid email'
+                              : null,
                 ),
                 const SizedBox(height: 10),
 
@@ -335,8 +357,11 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
                     ),
                   ),
                   keyboardType: TextInputType.phone,
-                  validator: (val) =>
-                      val == null || val.length < 10 ? 'Enter valid phone number (min 10 digits)' : null,
+                  validator:
+                      (val) =>
+                          val == null || val.length < 10
+                              ? 'Enter valid phone number (min 10 digits)'
+                              : null,
                 ),
                 const SizedBox(height: 10),
 
@@ -348,8 +373,9 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
                       borderRadius: BorderRadius.all(Radius.circular(10)),
                     ),
                   ),
-                  validator: (val) =>
-                      val == null || val.isEmpty ? 'Enter location' : null,
+                  validator:
+                      (val) =>
+                          val == null || val.isEmpty ? 'Enter location' : null,
                 ),
                 const SizedBox(height: 10),
 
@@ -361,8 +387,11 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
                       borderRadius: BorderRadius.all(Radius.circular(10)),
                     ),
                   ),
-                  validator: (val) =>
-                      val == null || val.isEmpty ? 'Enter farming type' : null,
+                  validator:
+                      (val) =>
+                          val == null || val.isEmpty
+                              ? 'Enter farming type'
+                              : null,
                 ),
                 const SizedBox(height: 25),
 
@@ -373,14 +402,53 @@ class _FarmerProfilePageState extends State<FarmerProfilePage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green.shade700,
                       foregroundColor: Colors.white, // Text color
-                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 40,
+                        vertical: 15,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                     child: const Text(
                       'Save Changes',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20), // Spacing below button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade700,
+                      foregroundColor: Colors.white, // Text color
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 40,
+                        vertical: 15,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ReportPage(),
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      "Generate Report",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
