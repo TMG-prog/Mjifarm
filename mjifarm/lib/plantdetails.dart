@@ -145,11 +145,11 @@ class PlantDetailsPage extends StatelessWidget {
           CircleAvatar(
             radius: 25,
             backgroundColor: Colors.green.shade100,
-            child: Icon(icon, size: 28, color: Colors.green.shade800),
+            child: Icon(icon, size: 18, color: Colors.green.shade800),
           ),
-          const SizedBox(height: 10),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
-          Text(label, style: TextStyle(color: Colors.grey[600])),
+          const SizedBox(height: 8),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 6.5)),
+          Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 6.5),),
         ],
       ),
     );
@@ -165,24 +165,7 @@ class PlantDetailsPage extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Colors.grey.shade300),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Progress',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 10),
-            Container(
-              height: 150,
-              alignment: Alignment.center,
-              child: const Text(
-                'Progress Graph Placeholder',
-                style: TextStyle(color: Colors.grey),
-              ),
-            ),
-          ],
-        ),
+       
       ),
     );
   }
