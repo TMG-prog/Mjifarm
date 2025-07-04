@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'landingPage.dart';
+import 'about.dart';
 
 class Splash extends StatefulWidget {
   const Splash({super.key});
@@ -30,7 +31,7 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
     await Future.delayed(const Duration(seconds: 3)); 
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => LandingPage()),
+      MaterialPageRoute(builder: (context) => Aboutpage()),
     );
   }
 

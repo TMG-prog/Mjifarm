@@ -15,7 +15,6 @@ class HomeScreen extends StatelessWidget {
     // final WeatherData weatherSummary = getTodayWeatherSummary();
     // final String userName = currentUser?.displayName ?? 'Farmer';
 
-
     return Scaffold(
       appBar: AppBar(
         actions: [
@@ -27,22 +26,22 @@ class HomeScreen extends StatelessWidget {
                 MaterialPageRoute<ProfileScreen>(
                   builder:
                       (context) => ProfileScreen(
-                          appBar: AppBar(title: const Text('User Profile')),
-                          actions: [
-                            SignedOutAction((context) {
-                              Navigator.of(context).pop();
-                            }),
-                          ],
-                          children: [
-                            const Divider(),
-                            Padding(
-                              padding: const EdgeInsets.all(2),
-                              child: AspectRatio(
-                                aspectRatio: 1,
-                                child: Image.asset('assets/Mjifarms.png'),
-                              ),
+                        appBar: AppBar(title: const Text('User Profile')),
+                        actions: [
+                          SignedOutAction((context) {
+                            Navigator.of(context).pop();
+                          }),
+                        ],
+                        children: [
+                          const Divider(),
+                          Padding(
+                            padding: const EdgeInsets.all(2),
+                            child: AspectRatio(
+                              aspectRatio: 1,
+                              child: Image.asset('assets/Mjifarms.png'),
                             ),
-                          ],
+                          ),
+                        ],
                       ),
                 ),
               );
@@ -53,12 +52,17 @@ class HomeScreen extends StatelessWidget {
       ),
       body: Center(
         child: Column(
-          mainAxisAlignment:
-              MainAxisAlignment.center, // This fixes vertical alignment
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          // This fixes vertical alignment
           children: [
             Text(
               'Welcome to MjiFarms!',
-              style: Theme.of(context).textTheme.displaySmall,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                
+              ),
             ),
             const SizedBox(height: 30),
             SizedBox(
@@ -76,8 +80,8 @@ class HomeScreen extends StatelessWidget {
                     // This will NOT remove 'isExpert' or 'isAdmin' or other existing fields.
                     await userRef.update({
                       "name": user.displayName, // Update display name
-                      "email": user.email,       // Update email
-                      'userRole': ['farmer'],    // Set userRole to farmer
+                      "email": user.email, // Update email
+                      'userRole': ['farmer'], // Set userRole to farmer
                       // IMPORTANT: Do NOT include 'isExpert: false' here unless you intend to specifically remove it.
                       // The current rule for isExpert makes it permanent, so don't try to set it to false here.
                     });
@@ -94,7 +98,6 @@ class HomeScreen extends StatelessWidget {
                     // // Keep existing 'isExpert' if it was there and not explicitly changed
                     // // If isExpert was true, it would remain true.
                     // await userRef.set(dataToSet);
-
                   }
 
                   Navigator.push(

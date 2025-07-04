@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mjifarm/landingPage.dart';
 
 class Aboutpage extends StatelessWidget {
   const Aboutpage({Key? key}) : super(key: key);
@@ -13,8 +14,9 @@ class Aboutpage extends StatelessWidget {
         backgroundColor: primaryGreen,
         elevation: 0,
         title: const Text(
-          'About MjiFarms',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          'Welcome to MjiFarms',
+          
+          style:TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -84,6 +86,37 @@ class Aboutpage extends StatelessWidget {
               'Urban farming is a sustainable solution for food security, community building, and environmental stewardship.',
               style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
               textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Join the movement to transform our cities into green, productive spaces.',
+              style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor:  Colors.green.shade700,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 30,
+                  vertical: 15,
+                ),
+                textStyle: const TextStyle(fontSize: 18),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LandingPage()),
+                );
+              },
+              child: const Text(
+                "Join Us",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
             ),
 
             const SizedBox(height: 30),
@@ -182,7 +215,7 @@ class Aboutpage extends StatelessWidget {
         Text(
           value,
           style: TextStyle(
-            fontSize: 26,
+            fontSize: 18,
             fontWeight: FontWeight.bold,
             color: Colors.green.shade700,
           ),
@@ -190,7 +223,7 @@ class Aboutpage extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           label,
-          style: const TextStyle(fontSize: 14, color: Colors.black87),
+          style: const TextStyle(fontSize: 10, color: Colors.black87),
         ),
       ],
     );

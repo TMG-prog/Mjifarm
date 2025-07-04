@@ -42,6 +42,7 @@ class _WeatherPageState extends State<WeatherPage> {
   /// Determines the current position (latitude and longitude) of the device.
   /// This function handles permissions and ensures location services are enabled.
   Future<Position> _determinePosition() async {
+    
     bool serviceEnabled;
     LocationPermission permission;
 
